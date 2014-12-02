@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/eleaar/GitStat.svg?branch=master)](https://travis-ci.org/eleaar/GitStat)
 GitStat
 =======
 
