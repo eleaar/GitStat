@@ -1,33 +1,24 @@
 package logic
 
-import java.util.concurrent.Executors
-
-import akka.dispatch.ExecutionContexts
 import com.google.common.util.concurrent.MoreExecutors
-import logic.GitHubService.RepositoryInfo
+import mockws.MockWS
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatestplus.play.PlaySpec
-import play.api.libs.json.Json
-import play.api.libs.ws.WSClient
-import play.api.mvc.Action
 import play.api.http.HttpVerbs._
-import mockws.MockWS
-
-import play.api._
+import play.api.libs.json.Json
+import play.api.mvc.Action
 import play.api.mvc.Results._
-import play.api.http.Status._
-import scala.concurrent.{Await, ExecutionContext}
 
-import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext
 
 /**
  * Created by Daniel on 2014-12-05.
  */
 class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
 
-  import GitHubService._
+  import logic.GitHubService._
 
   implicit val defaultPatience = PatienceConfig(timeout = Span(2, Seconds), interval = Span(100, Millis))
   implicit val context = ExecutionContext.fromExecutor(MoreExecutors.directExecutor())
@@ -86,7 +77,7 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
 
       // then
       whenReady(futureResult.failed) { result =>
-        result must equal (RateExceeded(resetTime))
+        result must equal(RateExceeded(resetTime))
       }
     }
   }

@@ -1,10 +1,8 @@
 package logic
 
-import akka.japi.Option.Some
-import play.api.libs.ws.{WS, WSClient}
-import play.api.libs.ws.WSResponse
-import play.api.libs.json._
 import play.api.http.Status._
+import play.api.libs.json._
+import play.api.libs.ws.{WSClient, WSResponse}
 
 import scala.concurrent.ExecutionContext
 
@@ -31,7 +29,7 @@ object GitHubService {
 
 class GitHubService(client: WSClient) {
 
-  import GitHubService._
+  import logic.GitHubService._
 
   def search(name: String)(implicit context: ExecutionContext) = {
     client.url(searchUrl(name)).get().map {
