@@ -1,0 +1,17 @@
+@import logic.GitHubService.RepositoryInfo
+
+@(queryName: String, repositories: Seq[RepositoryInfo])
+
+@main("Welcome to Play") {
+
+    <h1>Results for: "@queryName"</h1>
+
+    <ul>
+    @for(r <- repositories) {
+        <li>
+            @r.full_name
+            @r.description
+        </li>
+    }
+    </ul>
+}

@@ -14,7 +14,8 @@ libraryDependencies ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "com.google.guava" % "guava" % "18.0"
+  "com.google.guava" % "guava" % "18.0",
+  "com.github.nscala-time" %% "nscala-time" % "1.6.0"
 )
 
 libraryDependencies ++= Seq(
