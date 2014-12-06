@@ -4,13 +4,14 @@
 
 @main("Welcome to Play") {
 
-    <h1>Results for: "@queryName"</h1>
+    <h1>Search results for: @queryName</h1>
 
     <ul>
     @for(r <- repositories) {
         <li>
-            @r.full_name
-            @r.description
+            <b>@r.full_name</b><br />
+            @r.description <br />
+            <a href="https://github.com/@r.full_name">open in Github</a>
         </li>
     }
     </ul>
