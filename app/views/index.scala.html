@@ -1,7 +1,6 @@
-@(message: String)
-
-@main("Welcome to Play") {
-
-    @play20.welcome(message)
-
+@main("Welcome to GitStat") {
+    <form action="/search" method="get">
+        <input type="text" name="name"><br>
+        <input type="submit" value="Submit">
+    </form>
 }

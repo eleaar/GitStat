@@ -12,7 +12,7 @@ import play.api.mvc._
 object Application extends Controller {
 
   def index = Action {
-    Ok(views.html.index("Your new application is ready."))
+    Ok(views.html.index())
   }
 
   implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
