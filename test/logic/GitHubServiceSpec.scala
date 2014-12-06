@@ -7,7 +7,7 @@ import org.scalatest.mock.MockitoSugar
 import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatestplus.play.PlaySpec
 import play.api.http.HttpVerbs._
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, _}
 import play.api.mvc.Action
 import play.api.mvc.Results._
 
@@ -56,6 +56,31 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
       // then
       whenReady(futureResult) { result =>
         result must contain theSameElementsAs repositoriesInfo
+      }
+    }
+
+    "transform null description into empty string" in {
+      // given
+      val name = "test"
+      val url = searchUrl(name)
+      val repositoryInfo = RepositoryInfo("name1", "")
+      val nullDescriptionJson = JsObject(Seq(
+        "full_name" -> JsString(repositoryInfo.full_name),
+        "description" -> JsNull
+      ))
+      val ws = new MockWS({
+        case (GET, `url`) => Action {
+          Ok(Json.obj("items" -> JsArray(Seq(nullDescriptionJson))))
+        }
+      })
+      val service = new GitHubService(ws)
+
+      // when
+      val futureResult = service.search(name)
+
+      // then
+      whenReady(futureResult) { result =>
+        result must contain theSameElementsAs Seq(repositoryInfo)
       }
     }
 
