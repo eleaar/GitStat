@@ -12,7 +12,7 @@ import play.api.libs.json.{Json, _}
 import play.api.mvc.Action
 import play.api.mvc.Results._
 
-import scala.concurrent.{Future, ExecutionContext}
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
  * Created by Daniel on 2014-12-05.
@@ -22,7 +22,7 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
   import logic.GitHubService._
   import logic.GitHubV3Format._
 
-  implicit val defaultPatience = PatienceConfig(timeout = Span(2, Seconds), interval = Span(100, Millis))
+  implicit val defaultPatience = PatienceConfig(timeout = Span(2, Seconds), interval = Span(200, Millis))
   implicit val context = ExecutionContext.fromExecutor(MoreExecutors.directExecutor())
 
   "The github service search" must {
@@ -30,46 +30,30 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
     "parse the JSON answer" in {
       // given
       val name = "test"
-      val url = searchUrl(name)
-      val repositoriesInfo = Seq(RepositoryInfo("name1", "description1"), RepositoryInfo("name2", "description2"))
-      val ws = new MockWS({
-        case (GET, `url`) => Action {
-          Ok(Json.obj("items" -> Json.toJson(repositoriesInfo)))
-        }
-      })
-      val service = new GitHubService(ws)
+      val repositoriesInfo = Seq.tabulate(2)(i => RepositoryInfo(s"name$i", s"description$i"))
 
-      // when
-      val futureResult = service.search(name)
-
-      // then
-      whenReady(futureResult) { result =>
-        result must contain theSameElementsAs repositoriesInfo
+      jsonResponseTest(
+        queryUrl = searchUrl(name),
+        replied = Json.obj("items" -> Json.toJson(repositoriesInfo)),
+        expected = repositoriesInfo) {
+        service => service.search(name)
       }
     }
 
     "transform null description into empty string" in {
       // given
       val name = "test"
-      val url = searchUrl(name)
-      val repositoryInfo = RepositoryInfo("name1", "")
+      val repositoriesInfo = Seq(RepositoryInfo("name1", ""))
       val nullDescriptionJson = JsObject(Seq(
-        "full_name" -> JsString(repositoryInfo.full_name),
+        "full_name" -> JsString(repositoriesInfo.head.full_name),
         "description" -> JsNull
       ))
-      val ws = new MockWS({
-        case (GET, `url`) => Action {
-          Ok(Json.obj("items" -> JsArray(Seq(nullDescriptionJson))))
-        }
-      })
-      val service = new GitHubService(ws)
 
-      // when
-      val futureResult = service.search(name)
-
-      // then
-      whenReady(futureResult) { result =>
-        result must contain theSameElementsAs Seq(repositoryInfo)
+      jsonResponseTest(
+        queryUrl = searchUrl(name),
+        replied = Json.obj("items" -> JsArray(Seq(nullDescriptionJson))),
+        expected = repositoriesInfo) {
+        service => service.search(name)
       }
     }
 
@@ -84,26 +68,36 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
       // given
       val user = "user"
       val repo = "repo"
-      val url = commitsUrl(user, repo)
-      val commitsInfo = Seq.tabulate(3)(i => CommitInfo(s"sha$i", DateTime.now, CommitAuthor(s"name$i", i.toLong)))
-      val ws = new MockWS({
-        case (GET, `url`) => Action {
-          Ok(Json.toJson(commitsInfo))
-        }
-      })
-      val service = new GitHubService(ws)
+      val commitsInfo = Seq.tabulate(2)(i => CommitInfo(s"sha$i", DateTime.now, CommitAuthor(s"name$i", i.toLong)))
 
-      // when
-      val futureResult = service.stats(user, repo)
-
-      // then
-      whenReady(futureResult) { result =>
-        result must contain theSameElementsAs commitsInfo
+      jsonResponseTest(
+        queryUrl = commitsUrl(user, repo),
+        replied = Json.toJson(commitsInfo),
+        expected = commitsInfo) {
+        service => service.stats(user, repo)
       }
     }
 
     "fail with RateExceeded when the rate limit is exceeded" in rateLimitTest {
-      service => service.stats("user","repo")
+      service => service.stats("user", "repo")
+    }
+  }
+
+  def jsonResponseTest[T](queryUrl: String, replied: JsValue, expected: T)(body: (GitHubService) => Future[T]) = {
+    // given
+    val ws = new MockWS({
+      case (GET, `queryUrl`) => Action {
+        Ok(replied)
+      }
+    })
+    val service = new GitHubService(ws)
+
+    // when
+    val futureResult = body(service)
+
+    // then
+    whenReady(futureResult) { result =>
+      result must equal(expected)
     }
   }
 
