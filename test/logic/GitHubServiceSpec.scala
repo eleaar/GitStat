@@ -1,6 +1,7 @@
 package logic
 
 import com.google.common.util.concurrent.MoreExecutors
+import logic.GitHubService
 import mockws.MockWS
 import org.joda.time.DateTime
 import org.scalatest.concurrent.ScalaFutures
@@ -27,6 +28,8 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
 
   "The github service search" must {
 
+    def search(name: String) = (s: GitHubService) => s.search(name)
+
     "parse the JSON answer" in {
       // given
       val name = "test"
@@ -34,10 +37,9 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
 
       jsonResponseTest(
         queryUrl = searchUrl(name),
-        replied = Json.obj("items" -> Json.toJson(repositoriesInfo)),
-        expected = repositoriesInfo) {
-        service => service.search(name)
-      }
+        withMethod = search(name),
+        replyWith = Json.obj("items" -> Json.toJson(repositoriesInfo)),
+        expectedResult = repositoriesInfo)
     }
 
     "transform null description into empty string" in {
@@ -51,18 +53,17 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
 
       jsonResponseTest(
         queryUrl = searchUrl(name),
-        replied = Json.obj("items" -> JsArray(Seq(nullDescriptionJson))),
-        expected = repositoriesInfo) {
-        service => service.search(name)
-      }
+        withMethod = search(name),
+        replyWith = Json.obj("items" -> JsArray(Seq(nullDescriptionJson))),
+        expectedResult = repositoriesInfo)
     }
 
-    "fail with RateExceeded when the rate limit is exceeded" in rateLimitTest {
-      service => service.search("name")
-    }
+    "fail with RateExceeded when the rate limit is exceeded" in rateLimitTest(withMethod = search("name"))
   }
 
   "The github service stats" must {
+
+    def stats(user: String, repo: String) = (s: GitHubService) => s.stats(user, repo)
 
     "parse the JSON answer" in {
       // given
@@ -72,36 +73,34 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
 
       jsonResponseTest(
         queryUrl = commitsUrl(user, repo),
-        replied = Json.toJson(commitsInfo),
-        expected = commitsInfo) {
-        service => service.stats(user, repo)
-      }
+        withMethod = stats("user", "repo"),
+        replyWith = Json.toJson(commitsInfo),
+        expectedResult = commitsInfo)
     }
 
-    "fail with RateExceeded when the rate limit is exceeded" in rateLimitTest {
-      service => service.stats("user", "repo")
-    }
+    "fail with RateExceeded when the rate limit is exceeded" in rateLimitTest(withMethod = stats("user", "repo"))
+
+    "fail with NotFound when not found" in notFoundTest(withMethod = stats("user", "repo"))
   }
 
-  def jsonResponseTest[T](queryUrl: String, replied: JsValue, expected: T)(body: (GitHubService) => Future[T]) = {
-    // given
+  def jsonResponseTest[T](queryUrl: String, withMethod: (GitHubService) => Future[T], replyWith: JsValue, expectedResult: T) = {
     val ws = new MockWS({
       case (GET, `queryUrl`) => Action {
-        Ok(replied)
+        Ok(replyWith)
       }
     })
     val service = new GitHubService(ws)
 
     // when
-    val futureResult = body(service)
+    val futureResult = withMethod(service)
 
     // then
     whenReady(futureResult) { result =>
-      result must equal(expected)
+      result must equal(expectedResult)
     }
   }
 
-  def rateLimitTest(body: (GitHubService) => Future[Any]) = {
+  def rateLimitTest(withMethod: (GitHubService) => Future[Any]) = {
     // given
     val resetTime = 12345
     val ws = new MockWS({
@@ -112,11 +111,28 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
     val service = new GitHubService(ws)
 
     // when
-    val futureResult = body(service)
+    val futureResult = withMethod(service)
 
     // then
     whenReady(futureResult.failed) { result =>
       result must equal(RateExceeded(resetTime))
+    }
+  }
+
+  def notFoundTest(withMethod: (GitHubService) => Future[Any]) = {
+    val ws = new MockWS({
+      case (GET, _) => Action {
+        NotFound
+      }
+    })
+    val service = new GitHubService(ws)
+
+    // when
+    val futureResult = withMethod(service)
+
+    // then
+    whenReady(futureResult.failed) { result =>
+      result must equal(NotFoundException)
     }
   }
 }

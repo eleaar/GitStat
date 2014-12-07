@@ -18,12 +18,12 @@ object GitHubService {
 
   def searchUrl(name: String) = github + s"/search/repositories?q=$name"
 
-  def commitsUrl(user: String, repo: String) = github + s"/repos/"
+  def commitsUrl(user: String, repo: String) = github + s"/repos/$user/$repo/commits"
 
   trait GitHubException extends Exception
 
   case class RateExceeded(resetTime: Long) extends GitHubException
-
+  case object NotFoundException extends GitHubException
 }
 
 class GitHubService(client: WSClient) {
@@ -52,6 +52,9 @@ class GitHubService(client: WSClient) {
             log.error(s"Could not validate response from $queryUrl. \n Response: ${Json.stringify(response.json)}. \n Errors: ${Json.stringify(JsError.toFlatJson(e))}")
             throw new Exception("Response validation failed")
         }
+      case response if response.status == NOT_FOUND =>
+        log.debug(s"Querying $queryUrl: resource not found")
+        throw NotFoundException
       case response if isRateExceeded(response) =>
         log.warn(s"Exceeding github rates when querying $queryUrl")
         throw new RateExceeded(getResetTime(response))
