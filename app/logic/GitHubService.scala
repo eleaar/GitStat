@@ -18,7 +18,7 @@ object GitHubService {
 
   def searchUrl(name: String) = github + s"/search/repositories?q=$name"
 
-  def commitsUrl(user: String, repo: String) = github + s"/repos/$user/$repo/commits"
+  def commitsUrl(user: String, repo: String) = github + s"/repos/$user/$repo/commits?per_page=100"
 
   trait GitHubException extends Exception
 
