@@ -1,0 +1,17 @@
+@import logic.GitHubV3Format.CommitInfo
+
+@(name: String, commits: Seq[CommitInfo])
+
+@main(s"$name statistics") {
+
+    <h1>Statistics for: <a href="https://github.com/@name">@name</a></h1>
+
+    <ul>
+    @for(r <- commits) {
+        <li>
+            <b>@r.sha</b><br />
+            @r.date <br />
+        </li>
+    }
+    </ul>
+}

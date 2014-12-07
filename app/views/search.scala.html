@@ -2,7 +2,7 @@
 
 @(queryName: String, repositories: Seq[RepositoryInfo])
 
-@main("Welcome to Play") {
+@main(s"Search results for $queryName") {
 
     <h1>Search results for: @queryName</h1>
 
@@ -11,7 +11,8 @@
         <li>
             <b>@r.full_name</b><br />
             @r.description <br />
-            <a href="https://github.com/@r.full_name">open in Github</a>
+            <a href="https://github.com/@r.full_name">Open in Github</a><br />
+            <a href="/stats/@r.full_name">View statistics</a>
         </li>
     }
     </ul>
