@@ -69,7 +69,7 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
       // given
       val user = "user"
       val repo = "repo"
-      val commitsInfo = Seq.tabulate(2)(i => CommitInfo(s"sha$i", DateTime.now, CommitAuthor(s"name$i", i.toLong)))
+      val commitsInfo = Seq.tabulate(2)(i => CommitInfo(s"sha$i", DateTime.now, s"name$i"))
 
       jsonResponseTest(
         queryUrl = commitsUrl(user, repo),
