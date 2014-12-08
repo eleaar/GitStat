@@ -1,16 +1,25 @@
 @import logic.GitHubV3Format.Contributor
 
-@(name: String, contributors: Seq[Contributor])
+@(name: String, contributors: Seq[Contributor], commits: Seq[(Option[Contributor], Int)])
 
 @main(s"$name statistics") {
 
     <h1>Statistics for: <a href="https://github.com/@name">@name</a></h1>
 
-    Contributors:
+    <p>Contributors:</p>
     <ul>
     @for(r <- contributors) {
         <li>
             <a href="https://github.com/@r.login">@r.login</a>
+        </li>
+    }
+    </ul>
+
+    <p>Recently active (over last 100 commits):</p>
+    <ul>
+    @for(c <- commits) {
+        <li>
+            @c._1.map(x => _.login).getOrElse("Unknown users"): @c._2
         </li>
     }
     </ul>

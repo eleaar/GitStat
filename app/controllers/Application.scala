@@ -2,7 +2,7 @@ package controllers
 
 import java.net.ConnectException
 
-import logic.GitHubService
+import logic.{Analytics, GitHubService}
 import logic.GitHubService._
 import org.joda.time.{DateTime, Seconds}
 import play.api.Play.current
@@ -33,12 +33,13 @@ object Application extends Controller {
 
   def stats(user: String, repo: String) = Action.async {
     val contributorsF = gitHubService.contributors(user, repo)
-//    val commitsF = gitHubService.stats(user, repo)
+    val commitsF = gitHubService.commits(user, repo).map(Analytics.commitsPerUser)
 
     val response = for (
-      contributors <- contributorsF
+      contributors <- contributorsF;
+      commits <- commitsF
     ) yield {
-      Ok(views.html.stats(s"$user/$repo", contributors))
+      Ok(views.html.stats(s"$user/$repo", contributors, commits))
     }
 
     response recover {
