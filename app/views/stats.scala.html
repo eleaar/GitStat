@@ -1,6 +1,6 @@
 @import logic.GitHubV3Format.Contributor
-
-@(name: String, contributors: Seq[Contributor], commits: Seq[(Option[Contributor], Int)])
+@import logic.Analytics._
+@(name: String, contributors: Seq[Contributor], userActivity: Seq[UserActivity], dateActivity: Seq[DateActivity])
 
 @main(s"$name statistics") {
 
@@ -17,9 +17,25 @@
 
     <p>Recently active (over last 100 commits):</p>
     <ul>
-    @for(c <- commits) {
+    @for(c <- userActivity) {
         <li>
             @c._1.map(_.login).getOrElse("Unknown users"): @c._2
+        </li>
+    }
+    </ul>
+
+    <p>Activity per date:</p>
+    <ul>
+    @for(date <- dateActivity) {
+        <li>
+            @date._1
+            <ul>
+            @for(user <- date._2) {
+                <li>
+                    @user._1.map(_.login).getOrElse("Unknown users"): @user._2
+                </li>
+            }
+            </ul>
         </li>
     }
     </ul>
