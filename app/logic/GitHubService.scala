@@ -18,6 +18,8 @@ object GitHubService {
 
   def searchUrl(name: String) = github + s"/search/repositories?q=$name"
 
+  def contributorsUrl(user: String, repo: String) =  github + s"/repos/$user/$repo/contributors"
+
   def commitsUrl(user: String, repo: String) = github + s"/repos/$user/$repo/commits?per_page=100"
 
   trait GitHubException extends Exception
@@ -37,9 +39,14 @@ class GitHubService(client: WSClient) {
     json => (json \ "items").validate[Seq[RepositoryInfo]]
   }
 
+  def contributors(user: String, repo: String)(implicit context: ExecutionContext) = queryGithub(contributorsUrl(user, repo)) {
+    json => json.validate[Seq[Contributor]]
+  }
+
   def stats(user: String, repo: String)(implicit context: ExecutionContext) = queryGithub(commitsUrl(user, repo)) {
     json => json.validate[Seq[CommitInfo]]
   }
+
 
   private def queryGithub[T](queryUrl: String)(parseResponse: (JsValue) => JsResult[T])(implicit context: ExecutionContext) = {
     client.url(queryUrl).get().map {

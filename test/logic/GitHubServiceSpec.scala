@@ -1,7 +1,6 @@
 package logic
 
 import com.google.common.util.concurrent.MoreExecutors
-import logic.GitHubService
 import mockws.MockWS
 import org.joda.time.DateTime
 import org.scalatest.concurrent.ScalaFutures
@@ -59,6 +58,27 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
     }
 
     "fail with RateExceeded when the rate limit is exceeded" in rateLimitTest(withMethod = search("name"))
+  }
+
+  "The github service contributors" must {
+    def contributors(user: String, repo: String) = (s: GitHubService) => s.contributors(user, repo)
+
+    "parse the JSON answer" in {
+      // given
+      val user = "user"
+      val repo = "repo"
+      val contributorsData = Seq.tabulate(2)(i => Contributor(s"name$i", i))
+
+      jsonResponseTest(
+        queryUrl = contributorsUrl(user, repo),
+        withMethod = contributors(user, repo),
+        replyWith = Json.toJson(contributorsData),
+        expectedResult = contributorsData)
+    }
+
+    "fail with RateExceeded when the rate limit is exceeded" in rateLimitTest(withMethod = contributors("user", "repo"))
+
+    "fail with NotFound when not found" in notFoundTest(withMethod = contributors("user", "repo"))
   }
 
   "The github service stats" must {

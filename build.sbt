@@ -7,14 +7,12 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala)
 scalaVersion := "2.11.4"
 
 libraryDependencies ++= Seq(
-  jdbc,
-  anorm,
   cache,
   ws
 )
 
 libraryDependencies ++= Seq(
-  "com.google.guava" % "guava" % "18.0",
+  "com.google.guava" % "guava" % "16.0.1",
   "com.github.nscala-time" %% "nscala-time" % "1.6.0"
 )
 

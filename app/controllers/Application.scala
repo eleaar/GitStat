@@ -32,10 +32,16 @@ object Application extends Controller {
   }
 
   def stats(user: String, repo: String) = Action.async {
-    gitHubService.stats(user, repo).map {
-      case commits =>
-        Ok(views.html.stats(s"$user/$repo", commits))
-    } recover {
+    val contributorsF = gitHubService.contributors(user, repo)
+    val commitsF = gitHubService.stats(user, repo)
+
+    val response = for (
+      contributors <- contributorsF
+    ) yield {
+      Ok(views.html.stats(s"$user/$repo", contributors))
+    }
+
+    response recover {
       case error: ConnectException =>
         ServiceUnavailable("Could not connect to Github")
       case RateExceeded(time) =>

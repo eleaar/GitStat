@@ -20,6 +20,10 @@ object GitHubV3Format {
   implicit val dateTimeReads = JsPath.read[String].map(new DateTime(_))
   implicit val dateTimeWrites = Writes((dateTime: DateTime) => JsString(dateTime.toString))
 
+  case class Contributor(login: String, id: Long)
+  implicit val contributorReads = Json.reads[Contributor]
+  implicit val contributorWrites = Json.writes[Contributor]
+
   case class CommitInfo(sha: String, date: DateTime, author: String)
 
   implicit val commitInfoReads = (

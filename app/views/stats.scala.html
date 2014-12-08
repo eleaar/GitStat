@@ -1,16 +1,16 @@
-@import logic.GitHubV3Format.CommitInfo
+@import logic.GitHubV3Format.Contributor
 
-@(name: String, commits: Seq[CommitInfo])
+@(name: String, contributors: Seq[Contributor])
 
 @main(s"$name statistics") {
 
     <h1>Statistics for: <a href="https://github.com/@name">@name</a></h1>
 
+    Contributors:
     <ul>
-    @for(r <- commits) {
+    @for(r <- contributors) {
         <li>
-            <b>@r.sha</b><br />
-            @r.date <br />
+            <a href="https://github.com/@r.login">@r.login</a>
         </li>
     }
     </ul>
