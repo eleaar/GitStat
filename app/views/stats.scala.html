@@ -19,7 +19,7 @@
     <ul>
     @for(c <- commits) {
         <li>
-            @c._1.map(x => _.login).getOrElse("Unknown users"): @c._2
+            @c._1.map(_.login).getOrElse("Unknown users"): @c._2
         </li>
     }
     </ul>
