@@ -24,16 +24,16 @@ object GitHubV3Format {
   implicit val contributorReads = Json.reads[Contributor]
   implicit val contributorWrites = Json.writes[Contributor]
 
-  case class CommitInfo(sha: String, date: DateTime, author: String)
+  case class CommitInfo(sha: String, date: DateTime, commiter: Option[Contributor])
 
   implicit val commitInfoReads = (
     (JsPath \ "sha").read[String] and
-      (JsPath \ "commit" \ "author" \ "date").read[DateTime] and
-      (JsPath \ "commit" \ "author" \ "name").read[String]
+      (JsPath \ "commit" \ "committer" \ "date").read[DateTime] and
+      (JsPath \ "committer").readNullable[Contributor]
     )(CommitInfo.apply _)
   implicit val commitInfoWrites = (
     (JsPath \ "sha").write[String] and
-      (JsPath \ "commit" \ "author" \ "date").write[DateTime] and
-      (JsPath \ "commit" \ "author" \ "name").write[String]
+      (JsPath \ "commit" \ "committer" \ "date").write[DateTime] and
+      (JsPath \ "committer").writeNullable[Contributor]
     )(unlift(CommitInfo.unapply))
 }

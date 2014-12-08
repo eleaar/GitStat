@@ -43,7 +43,7 @@ class GitHubService(client: WSClient) {
     json => json.validate[Seq[Contributor]]
   }
 
-  def stats(user: String, repo: String)(implicit context: ExecutionContext) = queryGithub(commitsUrl(user, repo)) {
+  def commits(user: String, repo: String)(implicit context: ExecutionContext) = queryGithub(commitsUrl(user, repo)) {
     json => json.validate[Seq[CommitInfo]]
   }
 

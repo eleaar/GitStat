@@ -11,6 +11,7 @@ import play.api.http.HttpVerbs._
 import play.api.libs.json.{Json, _}
 import play.api.mvc.Action
 import play.api.mvc.Results._
+import scala.Some
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -81,26 +82,39 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
     "fail with NotFound when not found" in notFoundTest(withMethod = contributors("user", "repo"))
   }
 
-  "The github service stats" must {
+  "The github service commits" must {
 
-    def stats(user: String, repo: String) = (s: GitHubService) => s.stats(user, repo)
+    def commits(user: String, repo: String) = (s: GitHubService) => s.commits(user, repo)
 
     "parse the JSON answer" in {
       // given
       val user = "user"
       val repo = "repo"
-      val commitsInfo = Seq.tabulate(2)(i => CommitInfo(s"sha$i", DateTime.now, s"name$i"))
+      val commitsInfo = Seq.tabulate(2)(i => CommitInfo(s"sha$i", DateTime.now, Some(Contributor(s"name$i", i))))
 
       jsonResponseTest(
         queryUrl = commitsUrl(user, repo),
-        withMethod = stats("user", "repo"),
+        withMethod = commits("user", "repo"),
         replyWith = Json.toJson(commitsInfo),
         expectedResult = commitsInfo)
     }
 
-    "fail with RateExceeded when the rate limit is exceeded" in rateLimitTest(withMethod = stats("user", "repo"))
+    "handle null commiter" in {
+      // given
+      val user = "user"
+      val repo = "repo"
+      val commitsInfo = Seq(CommitInfo("sha-null", DateTime.now, None))
 
-    "fail with NotFound when not found" in notFoundTest(withMethod = stats("user", "repo"))
+      jsonResponseTest(
+        queryUrl = commitsUrl(user, repo),
+        withMethod = commits("user", "repo"),
+        replyWith = Json.toJson(commitsInfo),
+        expectedResult = commitsInfo)
+    }
+
+    "fail with RateExceeded when the rate limit is exceeded" in rateLimitTest(withMethod = commits("user", "repo"))
+
+    "fail with NotFound when not found" in notFoundTest(withMethod = commits("user", "repo"))
   }
 
   def jsonResponseTest[T](queryUrl: String, withMethod: (GitHubService) => Future[T], replyWith: JsValue, expectedResult: T) = {

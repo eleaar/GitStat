@@ -33,7 +33,7 @@ object Application extends Controller {
 
   def stats(user: String, repo: String) = Action.async {
     val contributorsF = gitHubService.contributors(user, repo)
-    val commitsF = gitHubService.stats(user, repo)
+//    val commitsF = gitHubService.stats(user, repo)
 
     val response = for (
       contributors <- contributorsF
