@@ -48,6 +48,8 @@ class GitHubService(client: WSClient) {
   }
 
 
+  // TODO check empty arguments
+  // TODO sanitize query strings
   private def queryGithub[T](queryUrl: String)(parseResponse: (JsValue) => JsResult[T])(implicit context: ExecutionContext) = {
     client.url(queryUrl).get().map {
       case response if response.status == OK =>

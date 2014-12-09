@@ -1,6 +1,20 @@
 @main("Welcome to GitStat") {
-    <form action="/search" method="get">
-        <input type="text" name="name"><br>
-        <input type="submit" value="Submit">
-    </form>
+
+    <div class="jumbotron">
+        <h2>GitStat</h2>
+        <p class="lead">
+            Browse statistics about your favourite GitHub repositories.
+        </p>
+        <form action="/search" method="get" role="form">
+            <div class="input-group">
+                <label class="sr-only" for="nameInput">Repository name</label>
+                <input type="text" id="nameInput" name="name" placeholder="Repository name" class="form-control input-lg">
+                <span class="input-group-btn">
+                    <button type="submit" class="btn btn-success btn-lg" type="button">Search</button>
+                </span>
+            </div><!-- /input-group -->
+        </form>
+    </div>
+
+
 }
