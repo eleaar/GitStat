@@ -4,39 +4,60 @@
 
 @main(s"$name statistics") {
 
-    <h1>Statistics for: <a href="https://github.com/@name">@name</a></h1>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h2 >Statistics for: <a href="https://github.com/@name">@name</a></h2>
+        </div>
+    </div>
 
-    <p>Contributors:</p>
-    <ul>
-    @for(r <- contributors) {
-        <li>
-            <a href="https://github.com/@r.login">@r.login</a>
-        </li>
-    }
-    </ul>
+    <div class="row">
+        <div class="col-sm-4 col-xs-12">
+            <div class="panel panel-default">
+                <div class="panel-heading">Contributors:</div>
+                <div class="list-group">
+                @for(r <- contributors) {
+                    <a href="https://github.com/@r.login" class="list-group-item">
+                        @r.login
+                    </a>
+                }
+                </div>
+            </div>
+        </div>
 
-    <p>Recently active (over last 100 commits):</p>
-    <ul>
-    @for(c <- userActivity) {
-        <li>
-            @c._1.map(_.login).getOrElse("Unknown users"): @c._2
-        </li>
-    }
-    </ul>
-
-    <p>Activity per date:</p>
-    <ul>
-    @for(date <- dateActivity) {
-        <li>
-            @date._1
-            <ul>
-            @for(user <- date._2) {
-                <li>
-                    @user._1.map(_.login).getOrElse("Unknown users"): @user._2
-                </li>
-            }
-            </ul>
-        </li>
-    }
-    </ul>
+        <div class="col-sm-8 col-xs-12">
+            <div class="panel panel-default">
+                <div class="panel-heading">Recently active (over last 100 commits):</div>
+                <ul class="list-group">
+                @for(c <- userActivity) {
+                    <li class="list-group-item">
+                        @c._1.map(_.login).getOrElse("Unknown users"): @c._2
+                    </li>
+                }
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading">Activity per date:</div>
+        <ul class="list-group">
+        @for(date <- dateActivity) {
+            <li class="list-group-item">
+                <div class="row">
+                    <div class="col-xs-4">
+                        @date._1
+                    </div>
+                    <div class="col-xs-8">
+                        <ul class="list-group">
+                        @for(user <- date._2) {
+                            <li class="list-group-item">
+                                @user._1.map(_.login).getOrElse("Unknown users"): @user._2
+                            </li>
+                        }
+                        </ul>
+                    </div>
+                </div>
+            </li>
+        }
+        </ul>
+    </div>
 }
