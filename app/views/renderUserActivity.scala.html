@@ -1,0 +1,55 @@
+@import logic.GitHubV3Format.Contributor
+@import logic.Analytics._
+@(userActivity: Seq[UserActivity])
+
+<div class="panel panel-default">
+    <div class="panel-heading">Recent activity (over last 100 commits):</div>
+    <div id="userActivityGraph"></div>
+    <ul id="userActivityTable" class="list-group">
+    @for(c <- userActivity) {
+        <li class="list-group-item">
+            @c._1.map(_.login).getOrElse("Unknown users"): @c._2
+        </li>
+    }
+    </ul>
+</div>
+
+<script type="text/javascript">
+
+$(function () {
+    $( "#userActivityTable" ).remove();
+    var activityData = [@for(c <- userActivity) {
+                    ['@c._1.map(_.login).getOrElse("Unknown users")', @c._2],
+                }];
+    $('#userActivityGraph').highcharts({
+        chart: {
+            plotBackgroundColor: null,
+            plotShadow: false
+        },
+        title: {
+            text: ''
+        },
+        tooltip: {
+            pointFormat: '{series.name}: <b>{point.y} ({point.percentage:.1f}%)</b>'
+        },
+        plotOptions: {
+            pie: {
+                allowPointSelect: true,
+                cursor: 'pointer',
+                dataLabels: {
+                    enabled: true,
+                    format: '<b>{point.name}</b>: {point.y} ({point.percentage:.1f}%)',
+                    style: {
+                        color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
+                    }
+                }
+            }
+        },
+        series: [{
+            type: 'pie',
+            name: 'Recent activity',
+            data: activityData
+            }]
+    });
+});
+</script>

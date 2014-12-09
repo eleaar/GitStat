@@ -1,0 +1,77 @@
+@import logic.GitHubV3Format.Contributor
+@import logic.Analytics._
+@(userActivity2: Seq[UserActivity2], dateActivity: Seq[DateActivity])
+
+<div class="panel panel-default">
+    <div class="panel-heading">Activity per date:</div>
+    <div id="dateActivityGraph"></div>
+    <ul id="dateActivityTable" class="list-group">
+    @for(date <- dateActivity) {
+        <li class="list-group-item">
+            <div class="row">
+                <div class="col-xs-4">
+                @date._1
+                </div>
+                <div class="col-xs-8">
+                    <ul class="list-group">
+                    @for(user <- date._2) {
+                        <li class="list-group-item">
+                            @user._1.map(_.login).getOrElse("Unknown users"): @user._2
+                        </li>
+                    }
+                    </ul>
+                </div>
+            </div>
+        </li>
+    }
+    </ul>
+</div>
+
+<script type="text/javascript">
+$(function () {
+    $("#dateActivityTable" ).remove();
+    $('#dateActivityGraph').highcharts('StockChart', {
+        chart: {
+            type: 'column',
+        },
+        rangeSelector: {
+                selected: 2
+        },
+        title: {
+            text: ''
+        },
+
+        xAxis: {
+            type: 'datetime',
+        },
+        yAxis: {
+            title: {
+                text: 'Number of commits'
+            }
+        },
+        plotOptions: {
+            column: {
+                stacking: 'normal',
+
+            },
+            series: {
+                dataGrouping: {
+                    groupPixelWidth: 100
+                }
+            }
+        },
+        series: [
+        @for(user <- userActivity2) {
+            {
+                name: '@user._1.map(_.login).getOrElse("Unknown users")',
+                data: [
+                    @for(date <- user._2) {
+                        [@date._1.getMillis(), @date._2],
+                    }
+                ]
+            },
+         }
+        ]
+    });
+});
+</script>
