@@ -17,8 +17,11 @@ libraryDependencies ++= Seq(
 )
 
 libraryDependencies ++= Seq(
+  "org.webjars" %% "webjars-play" % "2.3.0-2",
+  "org.webjars" % "jquery" % "1.8.2",
   "org.webjars" % "bootstrap" % "3.3.1",
-  "org.webjars" %% "webjars-play" % "2.3.0-2"
+  "org.webjars" % "highcharts" % "4.0.4",
+  "org.webjars" % "highstock" % "2.0.4"
 )
 
 libraryDependencies ++= Seq(

@@ -10,9 +10,11 @@ import com.github.nscala_time.time.Imports._
 object Analytics {
 
   type UserActivity = (Option[Contributor], Int)
+  type UserActivity2 = (Option[Contributor], Seq[(DateTime, Int)])
   type DateActivity = (LocalDate, Seq[UserActivity])
 
-  val descendingCommitCount = Ordering.by[(Option[Contributor], Int), Int](_._2).reverse
+  val descendingCommitCount = Ordering.by[UserActivity, Int](_._2).reverse
+  val descendingCommitCount2 = Ordering.by[UserActivity2, Int](_._2.size).reverse
   val descendingDateCount = Ordering.by[(LocalDate, Seq[(Option[Contributor], Int)]), LocalDate](_._1).reverse
 
   /**
@@ -24,11 +26,22 @@ object Analytics {
     commitsCounted.sorted(descendingCommitCount)
   }
 
+  def commitsPerUser2(commitInfo: Seq[CommitInfo]): Seq[UserActivity2] = {
+    val groupedByUser = commitInfo.groupBy(_.commiter)
+    val groupedByUserAndDate = groupedByUser.mapValues {
+      commits => commits.groupBy(x => x.date.withTimeAtStartOfDay())
+    }
+    val countedByUserAndDate = groupedByUserAndDate.mapValues(_.mapValues(_.size))
+    val sortedByDate = countedByUserAndDate.mapValues(_.toSeq.sortBy(_._1))
+    sortedByDate.toSeq
+  }
+
   def commitsPerDate(commitInfo: Seq[CommitInfo])(implicit zone: DateTimeZone): Seq[DateActivity] = {
     val commitsGrouped = commitInfo.groupBy(x => new LocalDate(x.date, zone))
     val commitsCounted = commitsGrouped.mapValues(x => commitsPerUser(x).sorted(descendingCommitCount)).toSeq
     commitsCounted
   }
+
 
 
 }

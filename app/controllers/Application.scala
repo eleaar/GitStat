@@ -2,6 +2,7 @@ package controllers
 
 import java.net.ConnectException
 
+import com.github.nscala_time.time.Imports._
 import logic.{Analytics, GitHubService}
 import logic.GitHubService._
 import org.joda.time.{DateTimeZone, DateTime, Seconds}
@@ -36,14 +37,16 @@ object Application extends Controller {
     val contributorsF = gitHubService.contributors(user, repo)
     val commitsF = gitHubService.commits(user, repo)
     val userActivityF = commitsF.map(Analytics.commitsPerUser)
+    val userActivity2F = commitsF.map(Analytics.commitsPerUser2)
     val dateActivityF = commitsF.map(Analytics.commitsPerDate)
 
     val response = for (
       contributors <- contributorsF;
       userActivity <- userActivityF;
+      userActivity2 <- userActivity2F;
       dateActivity <- dateActivityF
     ) yield {
-      Ok(views.html.stats(s"$user/$repo", contributors, userActivity, dateActivity))
+      Ok(views.html.stats(s"$user/$repo", contributors, userActivity, userActivity2, dateActivity))
     }
 
     response recover {
