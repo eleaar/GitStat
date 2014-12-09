@@ -10,6 +10,8 @@ import play.api.Play.current
 import play.api.libs.ws.WS
 import play.api.mvc._
 
+import scala.concurrent.Future
+
 object Application extends Controller {
 
   def index = Action {
@@ -20,15 +22,19 @@ object Application extends Controller {
   val gitHubService = new GitHubService(WS.client)
 
   def search(name: String) = Action.async {
-    gitHubService.search(name).map {
-      case repositories =>
-        Ok(views.html.search(name, repositories))
-    } recover {
-      case error: ConnectException =>
-        ServiceUnavailable("Could not connect to Github")
-      case RateExceeded(time) =>
-        val seconds = Seconds.secondsBetween(DateTime.now, new DateTime(time * 1000)).getSeconds
-        Forbidden(s"Rate exceeded. Please try again in $seconds s")
+    if (name.trim.isEmpty) {
+      Future.successful(Redirect(controllers.routes.Application.index()))
+    } else {
+      gitHubService.search(name).map {
+        case repositories =>
+          Ok(views.html.search(name, repositories))
+      } recover {
+        case error: ConnectException =>
+          ServiceUnavailable("Could not connect to Github")
+        case RateExceeded(time) =>
+          val seconds = Seconds.secondsBetween(DateTime.now, new DateTime(time * 1000)).getSeconds
+          Forbidden(s"Rate exceeded. Please try again in $seconds s")
+      }
     }
   }
 
