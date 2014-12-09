@@ -25,7 +25,7 @@ object Application extends Controller {
     if (name.trim.isEmpty) {
       Future.successful(Redirect(controllers.routes.Application.index()))
     } else {
-      gitHubService.search(name).map {
+      gitHubService.search(name.trim).map {
         case repositories =>
           Ok(views.html.search(name, repositories))
       } recover {

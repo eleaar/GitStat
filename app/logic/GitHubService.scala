@@ -16,16 +16,18 @@ object GitHubService {
 
   val github = "https://api.github.com"
 
-  def searchUrl(name: String) = github + s"/search/repositories?q=$name"
+  def searchUrl(name: String) = github + s"/search/repositories"
 
-  def contributorsUrl(user: String, repo: String) =  github + s"/repos/$user/$repo/contributors"
+  def contributorsUrl(user: String, repo: String) = github + s"/repos/$user/$repo/contributors"
 
   def commitsUrl(user: String, repo: String) = github + s"/repos/$user/$repo/commits?per_page=100"
 
   trait GitHubException extends Exception
 
   case class RateExceeded(resetTime: Long) extends GitHubException
+
   case object NotFoundException extends GitHubException
+
 }
 
 class GitHubService(client: WSClient) {
@@ -35,7 +37,7 @@ class GitHubService(client: WSClient) {
   import logic.GitHubService._
   import logic.GitHubV3Format._
 
-  def search(name: String)(implicit context: ExecutionContext) = queryGithub(searchUrl(name)) {
+  def search(name: String)(implicit context: ExecutionContext) = queryGithub(searchUrl(name), ("q" -> name) ) {
     json => (json \ "items").validate[Seq[RepositoryInfo]]
   }
 
@@ -47,11 +49,13 @@ class GitHubService(client: WSClient) {
     json => json.validate[Seq[CommitInfo]]
   }
 
-
-  // TODO check empty arguments
-  // TODO sanitize query strings
-  private def queryGithub[T](queryUrl: String)(parseResponse: (JsValue) => JsResult[T])(implicit context: ExecutionContext) = {
-    client.url(queryUrl).get().map {
+  private def queryGithub[T](queryUrl: String, queryStrings: (String, String)*)
+                            (parseResponse: (JsValue) => JsResult[T])
+                            (implicit context: ExecutionContext) = {
+    client.url(queryUrl)
+      .withQueryString(queryStrings: _*)
+      .get()
+      .map {
       case response if response.status == OK =>
         parseResponse(response.json) match {
           case JsSuccess(result, _) =>

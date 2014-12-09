@@ -39,7 +39,7 @@ object Analytics {
   def commitsPerDate(commitInfo: Seq[CommitInfo])(implicit zone: DateTimeZone): Seq[DateActivity] = {
     val commitsGrouped = commitInfo.groupBy(x => new LocalDate(x.date, zone))
     val commitsCounted = commitsGrouped.mapValues(x => commitsPerUser(x).sorted(descendingCommitCount)).toSeq
-    commitsCounted
+    commitsCounted.sorted(descendingDateCount)
   }
 
 
