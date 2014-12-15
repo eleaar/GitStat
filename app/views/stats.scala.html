@@ -12,15 +12,17 @@
 
     <div class="panel panel-default">
         <div class="panel-heading">Contributors:</div>
-        <div class="panel-body">
         <div class="list-group">
-            <div class="row">
-        @for(r <- contributors) {
-            <a href="https://github.com/@r.login" class="list-group-item col-xs-6 col-sm-4 col-md-3">
-            @r.login
-            </a>
-        }
-        </div></div></div>
+            <div class="row ">
+            @for(r <- contributors) {
+                <div class="col-xs-6 col-sm-4 col-md-3">
+                <a href="https://github.com/@r.login" class="list-group-item">
+                @r.login
+                </a>
+                </div>
+            }
+            </div>
+        </div>
     </div>
 
     @renderUserActivity(userActivity)
