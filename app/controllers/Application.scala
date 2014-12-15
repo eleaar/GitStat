@@ -14,6 +14,10 @@ import scala.concurrent.Future
 
 object Application extends Controller {
 
+  def untrail(path: String) = Action {
+    MovedPermanently("/" + path)
+  }
+
   def index = Action {
     Ok(views.html.index())
   }
