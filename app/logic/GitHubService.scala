@@ -16,19 +16,13 @@ object GitHubService {
 
   val github = "https://api.github.com"
 
-  def searchUrl(name: String) = github + s"/search/repositories"
+  def searchUrl(name: String) = github + s"/search/repositories?per_page=100"
 
   def userRepositoriesUrl(user: String) = github + s"/users/$user/repos"
 
   def contributorsUrl(user: String, repo: String) = github + s"/repos/$user/$repo/contributors"
 
   def commitsUrl(user: String, repo: String) = github + s"/repos/$user/$repo/commits?per_page=100"
-
-  trait GitHubException extends Exception
-
-  case class RateExceeded(resetTime: Long) extends GitHubException
-
-  case object NotFoundException extends GitHubException
 
 }
 
@@ -39,44 +33,51 @@ class GitHubService(client: WSClient) {
   import logic.GitHubService._
   import logic.GitHubV3Format._
 
-  def search(name: String)(implicit context: ExecutionContext) = queryGithub(searchUrl(name), ("q" -> name) ) {
+  def search(name: String)(implicit context: ExecutionContext) = queryGithub(searchUrl(name), etag = None, "q" -> name) {
     json => (json \ "items").validate[Seq[RepositoryInfo]]
   }
 
-  def userRepositories(user: String)(implicit context: ExecutionContext) = queryGithub(userRepositoriesUrl(user)) {
+  def userRepositories(user: String, etag: Option[String] = None)(implicit context: ExecutionContext) = queryGithub(userRepositoriesUrl(user), etag) {
     json => json.validate[Seq[RepositoryInfo]]
   }
 
-  def contributors(user: String, repo: String)(implicit context: ExecutionContext) = queryGithub(contributorsUrl(user, repo)) {
+  def contributors(user: String, repo: String, etag: Option[String] = None)(implicit context: ExecutionContext) = queryGithub(contributorsUrl(user, repo), etag) {
     json => json.validate[Seq[Contributor]]
   }
 
-  def commits(user: String, repo: String)(implicit context: ExecutionContext) = queryGithub(commitsUrl(user, repo)) {
+  def commits(user: String, repo: String, etag: Option[String] = None)(implicit context: ExecutionContext) = queryGithub(commitsUrl(user, repo), etag) {
     json => json.validate[Seq[CommitInfo]]
   }
 
-  private def queryGithub[T](queryUrl: String, queryStrings: (String, String)*)
+  private def queryGithub[T](queryUrl: String, etag: Option[String], queryStrings: (String, String)*)
                             (parseResponse: (JsValue) => JsResult[T])
                             (implicit context: ExecutionContext) = {
-    client.url(queryUrl)
-      .withQueryString(queryStrings: _*)
-      .get()
+    val rawQuery = client.url(queryUrl)
+    val queryWithParameters = rawQuery.withQueryString(queryStrings: _*)
+    val queryWithEtag = etag match {
+      case None => queryWithParameters
+      case Some(value) => queryWithParameters.withHeaders("If-None-Match" -> s"$value")
+    }
+    queryWithEtag.get()
       .map {
       case response if response.status == OK =>
         parseResponse(response.json) match {
           case JsSuccess(result, _) =>
             log.debug(s"Querying $queryUrl successfull: $result")
-            result
+            Right(result)
           case e: JsError =>
             log.error(s"Could not validate response from $queryUrl. \n Response: ${Json.stringify(response.json)}. \n Errors: ${Json.stringify(JsError.toFlatJson(e))}")
             throw new Exception("Response validation failed")
         }
+      case response if response.status == NOT_MODIFIED =>
+        log.debug(s"Querying $queryUrl: resource not modified")
+        Left(NotModified)
       case response if response.status == NOT_FOUND =>
         log.debug(s"Querying $queryUrl: resource not found")
-        throw NotFoundException
+        Left(NotFound)
       case response if isRateExceeded(response) =>
         log.warn(s"Exceeding github rates when querying $queryUrl")
-        throw new RateExceeded(getResetTime(response))
+        Left(RateExceeded(getResetTime(response)))
       case x =>
         log.error(s"Unexpected response when querying $queryUrl: $x")
         throw new Exception("Unexpected response type")

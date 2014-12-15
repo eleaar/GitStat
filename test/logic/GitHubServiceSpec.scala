@@ -11,6 +11,7 @@ import play.api.http.HttpVerbs._
 import play.api.libs.json.{Json, _}
 import play.api.mvc.Action
 import play.api.mvc.Results._
+import play.api.mvc.Results
 import scala.Some
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -166,7 +167,7 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
 
     // then
     whenReady(futureResult) { result =>
-      result must equal(expectedResult)
+      result must equal(Right(expectedResult))
     }
   }
 
@@ -184,15 +185,15 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
     val futureResult = withMethod(service)
 
     // then
-    whenReady(futureResult.failed) { result =>
-      result must equal(RateExceeded(resetTime))
+    whenReady(futureResult) { result =>
+      result must equal(Left(RateExceeded(resetTime)))
     }
   }
 
   def notFoundTest(withMethod: (GitHubService) => Future[Any]) = {
     val ws = new MockWS({
       case (GET, _) => Action {
-        NotFound
+        Results.NotFound
       }
     })
     val service = new GitHubService(ws)
@@ -201,8 +202,8 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
     val futureResult = withMethod(service)
 
     // then
-    whenReady(futureResult.failed) { result =>
-      result must equal(NotFoundException)
+    whenReady(futureResult) { result =>
+      result must equal(Left(NotFound))
     }
   }
 }

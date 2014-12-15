@@ -9,6 +9,14 @@ import play.api.libs.json._
  */
 object GitHubV3Format {
 
+  trait GitHubResponse
+
+  case class RateExceeded(resetTime: Long) extends GitHubResponse
+
+  case object NotFound extends GitHubResponse
+
+  case object NotModified extends GitHubResponse
+
   case class RepositoryInfo(full_name: String, description: String)
 
   implicit val repositoryInfoReads = (
