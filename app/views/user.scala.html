@@ -1,0 +1,22 @@
+@import logic.GitHubV3Format.RepositoryInfo
+
+@(user: String, repositories: Seq[RepositoryInfo])
+
+@main(s"Repositories of user $user") {
+
+    <div class="panel panel-default">
+        <div class="panel-heading"><h2>Repositories of: <a href="https://github.com/@user">@user</a></h2></div>
+
+        <div class="list-group">
+        @for(r <- repositories) {
+            <a href="/stats/@r.full_name" class="list-group-item">
+                <h4 class="list-group-item-heading">@r.full_name</h4>
+                <p class="list-group-item-text">@r.description</p>
+            </a>
+        }
+        </div>
+    </div>
+
+
+
+}

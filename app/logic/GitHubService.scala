@@ -18,6 +18,8 @@ object GitHubService {
 
   def searchUrl(name: String) = github + s"/search/repositories"
 
+  def userRepositoriesUrl(user: String) = github + s"/users/$user/repos"
+
   def contributorsUrl(user: String, repo: String) = github + s"/repos/$user/$repo/contributors"
 
   def commitsUrl(user: String, repo: String) = github + s"/repos/$user/$repo/commits?per_page=100"
@@ -39,6 +41,10 @@ class GitHubService(client: WSClient) {
 
   def search(name: String)(implicit context: ExecutionContext) = queryGithub(searchUrl(name), ("q" -> name) ) {
     json => (json \ "items").validate[Seq[RepositoryInfo]]
+  }
+
+  def userRepositories(user: String)(implicit context: ExecutionContext) = queryGithub(userRepositoriesUrl(user)) {
+    json => json.validate[Seq[RepositoryInfo]]
   }
 
   def contributors(user: String, repo: String)(implicit context: ExecutionContext) = queryGithub(contributorsUrl(user, repo)) {

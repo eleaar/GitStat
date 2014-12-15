@@ -61,6 +61,42 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
     "fail with RateExceeded when the rate limit is exceeded" in rateLimitTest(withMethod = search("name"))
   }
 
+  "The github service userRepositories" must {
+    def userRepositories(user: String) = (s: GitHubService) => s.userRepositories(user)
+
+    "parse the JSON answer" in {
+      // given
+      val user = "test"
+      val repositoriesInfo = Seq.tabulate(2)(i => RepositoryInfo(s"name$i", s"description$i"))
+
+      jsonResponseTest(
+        queryUrl = userRepositoriesUrl(user),
+        withMethod = userRepositories(user),
+        replyWith = Json.toJson(repositoriesInfo),
+        expectedResult = repositoriesInfo)
+    }
+
+    "transform null description into empty string" in {
+      // given
+      val user = "user"
+      val repositoriesInfo = Seq(RepositoryInfo("name1", ""))
+      val nullDescriptionJson = JsObject(Seq(
+        "full_name" -> JsString(repositoriesInfo.head.full_name),
+        "description" -> JsNull
+      ))
+
+      jsonResponseTest(
+        queryUrl = userRepositoriesUrl(user),
+        withMethod = userRepositories(user),
+        replyWith = JsArray(Seq(nullDescriptionJson)),
+        expectedResult = repositoriesInfo)
+    }
+
+    "fail with RateExceeded when the rate limit is exceeded" in rateLimitTest(withMethod = userRepositories("user"))
+
+    "fail with NotFound when not found" in notFoundTest(withMethod = userRepositories("user"))
+  }
+
   "The github service contributors" must {
     def contributors(user: String, repo: String) = (s: GitHubService) => s.contributors(user, repo)
 

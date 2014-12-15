@@ -28,15 +28,17 @@ object Application extends Controller {
       gitHubService.search(name.trim).map {
         case repositories =>
           Ok(views.html.search(name, repositories))
-      } recover {
-        case error: ConnectException =>
-          ServiceUnavailable("Could not connect to Github")
-        case RateExceeded(time) =>
-          val seconds = Seconds.secondsBetween(DateTime.now, new DateTime(time * 1000)).getSeconds
-          Forbidden(s"Rate exceeded. Please try again in $seconds s")
-      }
+      } recover (handleErrorsFor("name"))
     }
   }
+
+  def userRepositories(user: String) = Action.async {
+    gitHubService.userRepositories(user).map {
+      case repositories =>
+        Ok(views.html.user(user, repositories))
+    } recover (handleErrorsFor("name"))
+  }
+
 
   def stats(user: String, repo: String) = Action.async {
     implicit val zone = DateTimeZone.getDefault()
@@ -55,14 +57,16 @@ object Application extends Controller {
       Ok(views.html.stats(s"$user/$repo", contributors, userActivity, userActivity2, dateActivity))
     }
 
-    response recover {
-      case error: ConnectException =>
-        ServiceUnavailable("Could not connect to Github")
-      case RateExceeded(time) =>
-        val seconds = Seconds.secondsBetween(DateTime.now, new DateTime(time * 1000)).getSeconds
-        Forbidden(s"Rate exceeded. Please try again in $seconds s")
-      case NotFoundException =>
-        NotFound(s"Sorry, couldn't find $user/$repo. Did you spell it right?")
-    }
+    response recover (handleErrorsFor(s"$user/$repo"))
+  }
+
+  def handleErrorsFor(resource: String): PartialFunction[Throwable, Result] = {
+    case error: ConnectException =>
+      ServiceUnavailable("Could not connect to Github")
+    case RateExceeded(time) =>
+      val seconds = Seconds.secondsBetween(DateTime.now, new DateTime(time * 1000)).getSeconds
+      Forbidden(s"Rate exceeded. Please try again in $seconds s")
+    case NotFoundException =>
+      NotFound(s"Sorry, couldn't find $resource. Did you spell it right?")
   }
 }

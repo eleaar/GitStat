@@ -6,6 +6,7 @@
 
 GET        /                         controllers.Application.index
 GET        /search                   controllers.Application.search(name)
+GET        /stats/:user              controllers.Application.userRepositories(user)
 GET        /stats/:user/:repo        controllers.Application.stats(user, repo)
 
 # Map static resources from the /public folder to the /assets URL path
