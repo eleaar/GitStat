@@ -6,7 +6,7 @@ import play.api.libs.json.Reads._
 import play.api.libs.json._
 import play.api.libs.ws.{WSClient, WSResponse}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Future, ExecutionContext}
 
 
 /**
@@ -51,7 +51,7 @@ class GitHubService(client: WSClient) {
 
   private def queryGithub[T](queryUrl: String, etag: Option[String], queryStrings: (String, String)*)
                             (parseResponse: (JsValue) => JsResult[T])
-                            (implicit context: ExecutionContext) = {
+                            (implicit context: ExecutionContext): Future[GitHubResponse[T]] = {
     val rawQuery = client.url(queryUrl)
     val queryWithParameters = rawQuery.withQueryString(queryStrings: _*)
     val queryWithEtag = etag match {
@@ -64,20 +64,20 @@ class GitHubService(client: WSClient) {
         parseResponse(response.json) match {
           case JsSuccess(result, _) =>
             log.debug(s"Querying $queryUrl successfull: $result")
-            Right(result)
+            Data[T](result, response.header("ETag"))
           case e: JsError =>
             log.error(s"Could not validate response from $queryUrl. \n Response: ${Json.stringify(response.json)}. \n Errors: ${Json.stringify(JsError.toFlatJson(e))}")
             throw new Exception("Response validation failed")
         }
       case response if response.status == NOT_MODIFIED =>
         log.debug(s"Querying $queryUrl: resource not modified")
-        Left(NotModified)
+        NotModified
       case response if response.status == NOT_FOUND =>
         log.debug(s"Querying $queryUrl: resource not found")
-        Left(NotFound)
+        NotFound
       case response if isRateExceeded(response) =>
         log.warn(s"Exceeding github rates when querying $queryUrl")
-        Left(RateExceeded(getResetTime(response)))
+        RateExceeded(getResetTime(response))
       case x =>
         log.error(s"Unexpected response when querying $queryUrl: $x")
         throw new Exception("Unexpected response type")

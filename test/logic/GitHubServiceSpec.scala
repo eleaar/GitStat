@@ -167,7 +167,7 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
 
     // then
     whenReady(futureResult) { result =>
-      result must equal(Right(expectedResult))
+      result must equal(Data(expectedResult, None))
     }
   }
 
@@ -186,7 +186,7 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
 
     // then
     whenReady(futureResult) { result =>
-      result must equal(Left(RateExceeded(resetTime)))
+      result must equal(RateExceeded(resetTime))
     }
   }
 
@@ -203,7 +203,7 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
 
     // then
     whenReady(futureResult) { result =>
-      result must equal(Left(NotFound))
+      result must equal(NotFound)
     }
   }
 }

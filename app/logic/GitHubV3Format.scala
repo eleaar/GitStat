@@ -9,13 +9,15 @@ import play.api.libs.json._
  */
 object GitHubV3Format {
 
-  trait GitHubResponse
+  trait GitHubResponse[+T]
 
-  case class RateExceeded(resetTime: Long) extends GitHubResponse
+  case class Data[T](payload: T, etag: Option[String]) extends GitHubResponse[T]
 
-  case object NotFound extends GitHubResponse
+  case class RateExceeded(resetTime: Long) extends GitHubResponse[Nothing]
 
-  case object NotModified extends GitHubResponse
+  case object NotFound extends GitHubResponse[Nothing]
+
+  case object NotModified extends GitHubResponse[Nothing]
 
   case class RepositoryInfo(full_name: String, description: String)
 

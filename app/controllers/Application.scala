@@ -3,13 +3,14 @@ package controllers
 import java.net.ConnectException
 
 import com.github.nscala_time.time.Imports._
-import logic.GitHubV3Format.Contributor
-import logic.{Analytics, GitHubService}
+import logic.GitHubV3Format.{RepositoryInfo, GitHubResponse, Data, Contributor}
+import logic.{GitHubV3Format, Analytics, GitHubService}
 import logic.GitHubService._
 import org.joda.time.{DateTimeZone, DateTime, Seconds}
 import play.api.Play.current
 import play.api.libs.ws.WS
 import play.api.mvc._
+import play.api.mvc.Results
 
 import scala.concurrent.Future
 
@@ -30,18 +31,20 @@ object Application extends Controller {
     if (name.trim.isEmpty) {
       Future.successful(Redirect(controllers.routes.Application.index()))
     } else {
-      gitHubService.search(name.trim).map {
-        case Right(repositories) =>
+      val futureData = gitHubService.search(name.trim)
+      futureData map handleResult(name) {
+        case Data(repositories, _) =>
           Ok(views.html.search(name, repositories))
-      } recover (handleErrorsFor("name"))
+      }
     }
   }
 
   def userRepositories(user: String) = Action.async {
-    gitHubService.userRepositories(user).map {
-      case Right(repositories) =>
+    val futureData = gitHubService.userRepositories(user)
+    futureData map handleResult(user) {
+      case Data(repositories, _) =>
         Ok(views.html.user(user, repositories))
-    } recover (handleErrorsFor("name"))
+    }
   }
 
 
@@ -49,31 +52,35 @@ object Application extends Controller {
     implicit val zone = DateTimeZone.getDefault()
     implicit val contributorsOrdering = Ordering.by[Contributor, String](_.login.toLowerCase)
 
-    val contributorsF = gitHubService.contributors(user, repo)
-    val commitsF = gitHubService.commits(user, repo)
-    val userActivityF = commitsF.map {case (Right(x)) => Analytics.commitsPerUser(x) }
-    val userActivity2F = commitsF.map{case (Right(x)) => Analytics.commitsPerUser2(x) }
-    val dateActivityF = commitsF.map{case (Right(x)) => Analytics.commitsPerDate(x) }
+    val contributorsResponseF = gitHubService.contributors(user, repo)
+    val commitsResponseF = gitHubService.commits(user, repo)
 
-    val response = for (
-      contributors <- contributorsF;
-      userActivity <- userActivityF;
-      userActivity2 <- userActivity2F;
-      dateActivity <- dateActivityF
-    ) yield {
-      Ok(views.html.stats(s"$user/$repo", contributors.right.get.sorted, userActivity, userActivity2, dateActivity))
+    for (contributorsResponse <- contributorsResponseF;
+         commitsResponse <- commitsResponseF) yield {
+      (contributorsResponse, commitsResponse) match {
+        case (Data(contributors, _), Data(commits, _)) =>
+          val userActivity = Analytics.commitsPerUser(commits)
+          val userActivity2 = Analytics.commitsPerUser2(commits)
+          val dateActivity = Analytics.commitsPerDate(commits)
+          Ok(views.html.stats(s"$user/$repo", contributors.sorted, userActivity, userActivity2, dateActivity))
+        case (NotModified, NotModified) =>
+          Results.NotModified
+        case (x, y) =>
+          val handle = handleDefaultsFor(s"$user/$repo").lift
+          handle(x).orElse(handle(y)).get
+      }
     }
-
-    response recover (handleErrorsFor(s"$user/$repo"))
   }
 
-  def handleErrorsFor(resource: String): PartialFunction[Throwable, Result] = {
-    case error: ConnectException =>
-      ServiceUnavailable("Could not connect to Github")
-//    case RateExceeded(time) =>
-//      val seconds = Seconds.secondsBetween(DateTime.now, new DateTime(time * 1000)).getSeconds
-//      Forbidden(s"Rate exceeded. Please try again in $seconds s")
-//    case NotFound =>
-//      NotFound(s"Sorry, couldn't find $resource. Did you spell it right?")
+  def handleResult[T](resource: String)(handler: PartialFunction[GitHubResponse[T], Result]) = handler orElse notModified orElse handleDefaultsFor(resource)
+
+  def notModified[T]: PartialFunction[GitHubResponse[T], Result] = {
+    case NotModified => Results.NotModified
+  }
+  def handleDefaultsFor[T](resource: String): PartialFunction[GitHubResponse[T], Result] = {
+    case GitHubV3Format.RateExceeded(time) =>
+      val seconds = Seconds.secondsBetween(DateTime.now, new DateTime(time * 1000)).getSeconds
+      Forbidden(s"Rate exceeded. Please try again in $seconds s")
+    case GitHubV3Format.NotFound => Results.NotFound(s"Sorry, couldn't find $resource. Did you spell it right?")
   }
 }
