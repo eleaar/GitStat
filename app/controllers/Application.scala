@@ -4,8 +4,8 @@ import java.net.ConnectException
 
 import com.github.nscala_time.time.Imports._
 import logic.GitHubV3Format.{RepositoryInfo, GitHubResponse, Data, Contributor}
-import logic.{GitHubV3Format, Analytics, GitHubService}
-import logic.GitHubService._
+import logic.{GitHubService, GitHubV3Format, Analytics, GitHubServiceImpl}
+import logic.GitHubServiceImpl._
 import org.joda.time.{DateTimeZone, DateTime, Seconds}
 import play.api.Play.current
 import play.api.libs.ws.WS
@@ -25,7 +25,7 @@ object Application extends Controller {
   }
 
   implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
-  val gitHubService = new GitHubService(WS.client)
+  val gitHubService: GitHubService = new GitHubServiceImpl(WS.client)
 
   def search(name: String) = Action.async {
     if (name.trim.isEmpty) {

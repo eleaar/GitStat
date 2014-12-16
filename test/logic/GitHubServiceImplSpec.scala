@@ -19,9 +19,9 @@ import scala.concurrent.{ExecutionContext, Future}
 /**
  * Created by Daniel on 2014-12-05.
  */
-class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
+class GitHubServiceImplSpec extends PlaySpec with MockitoSugar with ScalaFutures {
 
-  import logic.GitHubService._
+  import logic.GitHubServiceImpl._
   import logic.GitHubV3Format._
 
   implicit val defaultPatience = PatienceConfig(timeout = Span(2, Seconds), interval = Span(200, Millis))
@@ -29,7 +29,7 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
 
   "The github service search" must {
 
-    def search(name: String) = (s: GitHubService) => s.search(name)
+    def search(name: String) = (s: GitHubServiceImpl) => s.search(name)
 
     "parse the JSON answer" in {
       // given
@@ -63,7 +63,7 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
   }
 
   "The github service userRepositories" must {
-    def userRepositories(user: String) = (s: GitHubService) => s.userRepositories(user)
+    def userRepositories(user: String) = (s: GitHubServiceImpl) => s.userRepositories(user)
 
     "parse the JSON answer" in {
       // given
@@ -99,7 +99,7 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
   }
 
   "The github service contributors" must {
-    def contributors(user: String, repo: String) = (s: GitHubService) => s.contributors(user, repo)
+    def contributors(user: String, repo: String) = (s: GitHubServiceImpl) => s.contributors(user, repo)
 
     "parse the JSON answer" in {
       // given
@@ -121,7 +121,7 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
 
   "The github service commits" must {
 
-    def commits(user: String, repo: String) = (s: GitHubService) => s.commits(user, repo)
+    def commits(user: String, repo: String) = (s: GitHubServiceImpl) => s.commits(user, repo)
 
     "parse the JSON answer" in {
       // given
@@ -154,13 +154,13 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
     "fail with NotFound when not found" in notFoundTest(withMethod = commits("user", "repo"))
   }
 
-  def jsonResponseTest[T](queryUrl: String, withMethod: (GitHubService) => Future[T], replyWith: JsValue, expectedResult: T) = {
+  def jsonResponseTest[T](queryUrl: String, withMethod: (GitHubServiceImpl) => Future[T], replyWith: JsValue, expectedResult: T) = {
     val ws = new MockWS({
       case (GET, `queryUrl`) => Action {
         Ok(replyWith)
       }
     })
-    val service = new GitHubService(ws)
+    val service = new GitHubServiceImpl(ws)
 
     // when
     val futureResult = withMethod(service)
@@ -171,7 +171,7 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
     }
   }
 
-  def rateLimitTest(withMethod: (GitHubService) => Future[Any]) = {
+  def rateLimitTest(withMethod: (GitHubServiceImpl) => Future[Any]) = {
     // given
     val resetTime = 12345
     val ws = new MockWS({
@@ -179,7 +179,7 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
         Forbidden.withHeaders("X-RateLimit-Remaining" -> "0", "X-RateLimit-Reset" -> resetTime.toString)
       }
     })
-    val service = new GitHubService(ws)
+    val service = new GitHubServiceImpl(ws)
 
     // when
     val futureResult = withMethod(service)
@@ -190,13 +190,13 @@ class GitHubServiceSpec extends PlaySpec with MockitoSugar with ScalaFutures {
     }
   }
 
-  def notFoundTest(withMethod: (GitHubService) => Future[Any]) = {
+  def notFoundTest(withMethod: (GitHubServiceImpl) => Future[Any]) = {
     val ws = new MockWS({
       case (GET, _) => Action {
         Results.NotFound
       }
     })
-    val service = new GitHubService(ws)
+    val service = new GitHubServiceImpl(ws)
 
     // when
     val futureResult = withMethod(service)
