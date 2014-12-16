@@ -1,0 +1,6 @@
+{
+  "name": "GitStat",
+  "description": "Browse stats for your favourite GitHub repositories",
+  "repository": "https://github.com/eleaar/GitStat",
+  "keywords": ["github", "statistics"]
+}
