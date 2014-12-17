@@ -1,6 +1,6 @@
 @import logic.GitHubV3Format.Contributor
 @import logic.Analytics._
-@(name: String, contributors: Seq[Contributor], userActivity: Seq[UserActivity], userActivity2: Seq[UserActivity2], dateActivity: Seq[DateActivity])
+@(name: String, contributors: Seq[Contributor], userActivity: Seq[UserActivity])
 
 @main(s"$name statistics") {
 
@@ -26,5 +26,5 @@
     </div>
 
     @renderUserActivity(userActivity)
-    @renderDateActivity(userActivity2, dateActivity)
+    @renderDateActivity(userActivity)
 }

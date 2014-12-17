@@ -1,22 +1,22 @@
 @import logic.GitHubV3Format.Contributor
 @import logic.Analytics._
-@(userActivity2: Seq[UserActivity2], dateActivity: Seq[DateActivity])
+@(userActivity: Seq[UserActivity])
 
 <div class="panel panel-default">
     <div class="panel-heading">Activity per date:</div>
     <div id="dateActivityGraph"></div>
     <ul id="dateActivityTable" class="list-group">
-    @for(date <- dateActivity) {
+    @for(activity <- userActivity) {
         <li class="list-group-item">
             <div class="row">
                 <div class="col-xs-4">
-                @date._1
+                @activity._1.map(_.login).getOrElse("Unknown users")
                 </div>
                 <div class="col-xs-8">
                     <ul class="list-group">
-                    @for(user <- date._2) {
+                    @for(date <- activity._2) {
                         <li class="list-group-item">
-                            @user._1.map(_.login).getOrElse("Unknown users"): @user._2
+                            @date._1: @date._2
                         </li>
                     }
                     </ul>
@@ -61,7 +61,7 @@ $(function () {
             }
         },
         series: [
-        @for(user <- userActivity2) {
+        @for(user <- userActivity) {
             {
                 name: '@user._1.map(_.login).getOrElse("Unknown users")',
                 data: [

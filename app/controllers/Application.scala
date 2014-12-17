@@ -1,6 +1,7 @@
 package controllers
 
 import cache.{AsyncCached, PrefixedCache}
+import logic.Analytics.UserActivity
 import logic.GitHubV3Format._
 import logic.{Analytics, GitHubService, GitHubServiceImpl, GitHubV3Format}
 import org.joda.time.{DateTime, DateTimeZone, Seconds}
@@ -58,6 +59,7 @@ object Application extends Controller {
 
   implicit val zone = DateTimeZone.getDefault()
   implicit val contributorsOrdering = Ordering.by[Contributor, String](_.login.toLowerCase)
+  implicit val descendingCommitCount = Ordering.by[UserActivity, Int](_._2.size).reverse
 
 
   def stats(user: String, repo: String) = Action.async {
@@ -71,9 +73,7 @@ object Application extends Controller {
           (contributorsResponse, commitsResponse) match {
             case (Data(contributors, _), Data(commits, _)) =>
               val userActivity = Analytics.commitsPerUser(commits)
-              val userActivity2 = Analytics.commitsPerUser2(commits)
-              val dateActivity = Analytics.commitsPerDate(commits)
-              Ok(views.html.stats(s"$user/$repo", contributors.sorted, userActivity, userActivity2, dateActivity))
+              Ok(views.html.stats(s"$user/$repo", contributors.sorted, userActivity))
             case (x, y) =>
               val handle = handleDefaultsFor(s"$user/$repo").lift
               handle(x).orElse(handle(y)).get

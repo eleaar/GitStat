@@ -8,7 +8,7 @@
     <ul id="userActivityTable" class="list-group">
     @for(c <- userActivity) {
         <li class="list-group-item">
-            @c._1.map(_.login).getOrElse("Unknown users"): @c._2
+            @c._1.map(_.login).getOrElse("Unknown users"): @c._2.map(_._2).sum
         </li>
     }
     </ul>
@@ -19,7 +19,7 @@
 $(function () {
     $( "#userActivityTable" ).remove();
     var activityData = [@for(c <- userActivity) {
-                    ['@c._1.map(_.login).getOrElse("Unknown users")', @c._2],
+                    ['@c._1.map(_.login).getOrElse("Unknown users")', @c._2.map(_._2).sum],
                 }];
     $('#userActivityGraph').highcharts({
         chart: {
