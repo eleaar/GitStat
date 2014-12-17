@@ -79,7 +79,7 @@ object Application extends Controller {
              commitsResponse <- commitsResponseF) yield {
           (contributorsResponse, commitsResponse) match {
             case (Data(contributors, _), Data(commits, _)) =>
-              Ok(views.html.stats(s"$user/$repo", contributors.sorted, commits))
+              Ok(views.html.stats(s"$user/$repo", contributors.sorted, commits.sorted))
             case (x, y) =>
               val handle = handleDefaultsFor(s"$user/$repo").lift
               handle(x).orElse(handle(y)).get
