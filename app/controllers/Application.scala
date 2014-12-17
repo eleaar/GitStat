@@ -66,14 +66,20 @@ object Application extends Controller {
     AsyncCached("stats").mergeCacheRequestsBy(s"$user.$repo") {
       cache =>
         val contributorsResponseF = tryWithCache(cache.at("contributors"))(gitHubService.contributors(user, repo, _))
-        val commitsResponseF = tryWithCache(cache.at("commits"))(gitHubService.commits(user, repo, _))
+        val commitsResponseF = tryWithCache(cache.at("commits")) {
+          gitHubService.commits(user, repo, _).map[GitHubResponse[Seq[UserActivity]]] {
+            case Data(commits, etag) =>
+              val userActivity = Analytics.commitsPerUser(commits)
+              Data(userActivity, etag)
+            case x => x.asInstanceOf[GitHubResponse[Seq[UserActivity]]]
+          }
+        }
 
         for (contributorsResponse <- contributorsResponseF;
              commitsResponse <- commitsResponseF) yield {
           (contributorsResponse, commitsResponse) match {
             case (Data(contributors, _), Data(commits, _)) =>
-              val userActivity = Analytics.commitsPerUser(commits)
-              Ok(views.html.stats(s"$user/$repo", contributors.sorted, userActivity))
+              Ok(views.html.stats(s"$user/$repo", contributors.sorted, commits))
             case (x, y) =>
               val handle = handleDefaultsFor(s"$user/$repo").lift
               handle(x).orElse(handle(y)).get
