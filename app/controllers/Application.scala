@@ -1,16 +1,18 @@
 package controllers
 
-import cache.AsyncCache
-import logic.GitHubV3Format.{RepositoryInfo, Contributor, Data, GitHubResponse}
+import cache.{AsyncCached, PrefixedCache}
+import logic.GitHubV3Format._
 import logic.{Analytics, GitHubService, GitHubServiceImpl, GitHubV3Format}
 import org.joda.time.{DateTime, DateTimeZone, Seconds}
 import play.api.Play
 import play.api.Play.current
+import play.api.cache.Cached
 import play.api.libs.ws.WS
 import play.api.mvc.{Results, _}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.reflect.ClassTag
 
 object Application extends Controller {
 
@@ -20,77 +22,91 @@ object Application extends Controller {
     MovedPermanently("/" + path)
   }
 
-  def index = Action {
-    Ok(views.html.index())
+  def index = Cached("index") {
+    Action {
+      Ok(views.html.index())
+    }
   }
 
   implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
   val gitHubService: GitHubService = new GitHubServiceImpl(WS.client, Play.current.configuration)
 
   def search(name: String) = Action.async {
-    if (name.trim.isEmpty) {
-      Future.successful(Redirect(controllers.routes.Application.index()))
-    } else {
-      val futureData = gitHubService.search(name.trim)
-      futureData map handleResult(name) {
-        case Data(repositories, _) =>
-          Ok(views.html.search(name, repositories))
+    AsyncCached("search").mergeRequestsBy(name) {
+      if (name.trim.isEmpty) {
+        Future.successful(Redirect(controllers.routes.Application.index()))
+      } else {
+        val futureData = gitHubService.search(name.trim)
+        futureData map handleResult(name) {
+          case Data(repositories, _) =>
+            Ok(views.html.search(name, repositories))
+        }
       }
     }
   }
 
   def userRepositories(user: String) = Action.async {
-    AsyncCache.mergeCacheBy(user) {
+    AsyncCached("userRepos").mergeCacheRequestsBy(user) {
       cache =>
-        val cachedData = cache.getAs[Seq[RepositoryInfo]]("data")
-        val etag = cachedData.flatMap(x => cache.getAs[String]("etag"))
-
-        val futureData = gitHubService.userRepositories(user, etag)
-        futureData map {
-          case d @ Data(newData, newEtag) =>
-            cache.set("data", newData, cacheExpiration)
-            cache.set("etag", newEtag, cacheExpiration)
-            d
-          case NotModified =>
-            // We can only receive this if we previously had some data and etag cached, so we're safe to get
-            Data(cachedData.get, etag)
-          case x => x
-        } map handleResult(user) {
-            case Data(repositories, _) =>
-              Ok(views.html.user(user, repositories))
-          }
+        val result = tryWithCache(cache)(gitHubService.userRepositories(user, _))
+        result map handleResult(user) {
+          case Data(repositories, _) =>
+            Ok(views.html.user(user, repositories))
+        }
     }
   }
 
+  implicit val zone = DateTimeZone.getDefault()
+  implicit val contributorsOrdering = Ordering.by[Contributor, String](_.login.toLowerCase)
+
 
   def stats(user: String, repo: String) = Action.async {
-    implicit val zone = DateTimeZone.getDefault()
-    implicit val contributorsOrdering = Ordering.by[Contributor, String](_.login.toLowerCase)
+    AsyncCached("stats").mergeCacheRequestsBy(s"$user.$repo") {
+      cache =>
+        val contributorsResponseF = tryWithCache(cache.at("contributors"))(gitHubService.contributors(user, repo, _))
+        val commitsResponseF = tryWithCache(cache.at("commits"))(gitHubService.commits(user, repo, _))
 
-    val contributorsResponseF = gitHubService.contributors(user, repo)
-    val commitsResponseF = gitHubService.commits(user, repo)
+        for (contributorsResponse <- contributorsResponseF;
+             commitsResponse <- commitsResponseF) yield {
+          (contributorsResponse, commitsResponse) match {
+            case (Data(contributors, _), Data(commits, _)) =>
+              val userActivity = Analytics.commitsPerUser(commits)
+              val userActivity2 = Analytics.commitsPerUser2(commits)
+              val dateActivity = Analytics.commitsPerDate(commits)
+              Ok(views.html.stats(s"$user/$repo", contributors.sorted, userActivity, userActivity2, dateActivity))
+            case (x, y) =>
+              val handle = handleDefaultsFor(s"$user/$repo").lift
+              handle(x).orElse(handle(y)).get
+          }
+        }
+    }
+  }
 
-    for (contributorsResponse <- contributorsResponseF;
-         commitsResponse <- commitsResponseF) yield {
-      (contributorsResponse, commitsResponse) match {
-        case (Data(contributors, _), Data(commits, _)) =>
-          val userActivity = Analytics.commitsPerUser(commits)
-          val userActivity2 = Analytics.commitsPerUser2(commits)
-          val dateActivity = Analytics.commitsPerDate(commits)
-          Ok(views.html.stats(s"$user/$repo", contributors.sorted, userActivity, userActivity2, dateActivity))
-        case (NotModified, NotModified) =>
-          Results.NotModified
-        case (x, y) =>
-          val handle = handleDefaultsFor(s"$user/$repo").lift
-          handle(x).orElse(handle(y)).get
-      }
+  def tryWithCache[T](cache: PrefixedCache)(body: (Option[String]) => Future[GitHubResponse[T]])(implicit ct: ClassTag[T]): Future[GitHubResponse[T]] = {
+    val dataKey = "data"
+    val etagKey = "etag"
+    val cacheExpiration = 1 hour
+
+    val cachedData = cache.getAs[T](dataKey)
+    val etag = cachedData.flatMap(x => cache.getAs[String](etagKey))
+
+    val result = body(etag)
+    result.map {
+      case d@Data(newData, newEtag) =>
+        cache.set(dataKey, newData, cacheExpiration)
+        newEtag.foreach(x => cache.set(etagKey, x, cacheExpiration))
+        d
+      case GitHubV3Format.NotModified =>
+        // We can only receive this if we previously had some data and etag cached, so we're safe to get
+        Data(cachedData.get, etag)
+      case x => x
     }
   }
 
   def handleResult[T](resource: String)(handler: PartialFunction[GitHubResponse[T], Result]) = handler orElse notModified orElse handleDefaultsFor(resource)
 
   def notModified[T]: PartialFunction[GitHubResponse[T], Result] = {
-    case NotModified => Results.NotModified
+    case GitHubV3Format.NotModified => Results.NotModified
   }
 
   def handleDefaultsFor[T](resource: String): PartialFunction[GitHubResponse[T], Result] = {
