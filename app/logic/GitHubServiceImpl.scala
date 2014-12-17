@@ -1,6 +1,6 @@
 package logic
 
-import play.api.Logger
+import play.api.{Play, Logger}
 import play.api.http.Status._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
@@ -30,6 +30,9 @@ class GitHubServiceImpl(client: WSClient) extends GitHubService {
 
   private val log = Logger(this.getClass())
 
+  val clientId = Play.current.configuration.getString("github.id").getOrElse("")
+  val clientSecret = Play.current.configuration.getString("github.secret").getOrElse("")
+
   import logic.GitHubServiceImpl._
   import logic.GitHubV3Format._
 
@@ -53,7 +56,8 @@ class GitHubServiceImpl(client: WSClient) extends GitHubService {
                             (parseResponse: (JsValue) => JsResult[T])
                             (implicit context: ExecutionContext): Future[GitHubResponse[T]] = {
     val rawQuery = client.url(queryUrl)
-    val queryWithParameters = rawQuery.withQueryString(queryStrings: _*)
+    val authenticationParameters = Seq("client_id" -> clientId, "client_secret" -> clientSecret)
+    val queryWithParameters = rawQuery.withQueryString(authenticationParameters ++ queryStrings: _*)
     val queryWithEtag = etag match {
       case None => queryWithParameters
       case Some(value) => queryWithParameters.withHeaders("If-None-Match" -> s"$value")
