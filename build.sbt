@@ -27,5 +27,6 @@ libraryDependencies ++= Seq(
 libraryDependencies ++= Seq(
   "org.scalatestplus" %% "play" % "1.2.0",
   "org.mockito" % "mockito-core" % "1.10.8",
-  "de.leanovate.play-mockws" %% "play-mockws" % "0.13"
+  "de.leanovate.play-mockws" %% "play-mockws" % "0.13",
+  "com.typesafe.akka" %% "akka-testkit" % "2.3.4"
 ).map(_ % "test")
