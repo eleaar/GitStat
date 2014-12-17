@@ -1,6 +1,7 @@
 package controllers
 
-import logic.GitHubV3Format.{Contributor, Data, GitHubResponse}
+import cache.AsyncCache
+import logic.GitHubV3Format.{RepositoryInfo, Contributor, Data, GitHubResponse}
 import logic.{Analytics, GitHubService, GitHubServiceImpl, GitHubV3Format}
 import org.joda.time.{DateTime, DateTimeZone, Seconds}
 import play.api.Play
@@ -9,8 +10,11 @@ import play.api.libs.ws.WS
 import play.api.mvc.{Results, _}
 
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 object Application extends Controller {
+
+  val cacheExpiration = 1 hour
 
   def untrail(path: String) = Action {
     MovedPermanently("/" + path)
@@ -36,10 +40,25 @@ object Application extends Controller {
   }
 
   def userRepositories(user: String) = Action.async {
-    val futureData = gitHubService.userRepositories(user)
-    futureData map handleResult(user) {
-      case Data(repositories, _) =>
-        Ok(views.html.user(user, repositories))
+    AsyncCache.mergeCacheBy(user) {
+      cache =>
+        val cachedData = cache.getAs[Seq[RepositoryInfo]]("data")
+        val etag = cachedData.flatMap(x => cache.getAs[String]("etag"))
+
+        val futureData = gitHubService.userRepositories(user, etag)
+        futureData map {
+          case d @ Data(newData, newEtag) =>
+            cache.set("data", newData, cacheExpiration)
+            cache.set("etag", newEtag, cacheExpiration)
+            d
+          case NotModified =>
+            // We can only receive this if we previously had some data and etag cached, so we're safe to get
+            Data(cachedData.get, etag)
+          case x => x
+        } map handleResult(user) {
+            case Data(repositories, _) =>
+              Ok(views.html.user(user, repositories))
+          }
     }
   }
 
