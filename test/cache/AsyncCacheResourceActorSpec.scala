@@ -105,7 +105,7 @@ class AsyncCacheResourceActorSpec(_system: ActorSystem) extends ActorSpecs(_syst
       val f = p.future
       val task = () => f
       val actor = TestFSMRef(new AsyncCacheResourceActor)
-      actor ! Request
+      actor ! Request(task)
 
       // when
       probe.send(actor, Request(task))
