@@ -9,6 +9,13 @@ import scala.concurrent.Future
  */
 object Global extends GlobalSettings {
 
+  override def onStart(app: Application) {
+    app.configuration.getBoolean("log-config-on-startup") match {
+      case Some(true) => Logger.debug(app.configuration.underlying.root().render())
+      case _ =>
+    }
+  }
+
   override def onError(request: RequestHeader, ex: Throwable) = {
     Logger.error(s"An error happenned when accessing ${request.path}: $ex")
     Future.successful(InternalServerError(
