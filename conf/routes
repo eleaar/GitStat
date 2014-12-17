@@ -4,8 +4,6 @@
 
 # Home page
 
-GET     /loaderio-8902778a06c83979dcd9477255140fd7.txt controllers.Assets.at(path="/public", file="loaderio.txt")
-
 GET        /                         controllers.Application.index
 GET        /search                   controllers.Application.search(name ?= "")
 GET        /stats/:user              controllers.Application.userRepositories(user)
