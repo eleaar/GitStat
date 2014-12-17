@@ -85,7 +85,7 @@ class GitHubServiceImpl(client: WSClient, config: Configuration) extends GitHubS
         log.debug(s"Querying $queryUrl: resource not found")
         NotFound
       case response if isRateExceeded(response) =>
-        val limit = response.header("X-RateLimit-Limit").get
+        val limit = response.header("X-RateLimit-Limit").getOrElse("unknown")
         log.warn(s"Exceeding github rates when querying $queryUrl. Limit was $limit")
         RateExceeded(getResetTime(response))
       case x =>
