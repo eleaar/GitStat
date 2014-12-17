@@ -74,3 +74,9 @@ body {
     border-bottom: 0;
   }
 }
+
+.nav-pills>li.active>a:hover {
+  color:#fff;
+  background-color:#286090;
+  border-color:#204d74
+}
