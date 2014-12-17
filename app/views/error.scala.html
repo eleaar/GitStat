@@ -1,0 +1,14 @@
+@import logic.GitHubV3Format.RepositoryInfo
+
+@(msg: String, content: String)
+
+@main(s"$msg") {
+
+    <div class="panel panel-default">
+        <div class="panel-heading"><h2>@msg</h2></div>
+        <div class="panel-body">@content</div>
+    </div>
+
+
+
+}

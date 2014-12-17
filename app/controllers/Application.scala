@@ -80,8 +80,8 @@ object Application extends Controller {
   def handleDefaultsFor[T](resource: String): PartialFunction[GitHubResponse[T], Result] = {
     case GitHubV3Format.RateExceeded(time) =>
       val seconds = Seconds.secondsBetween(DateTime.now, new DateTime(time * 1000)).getSeconds
-      Forbidden(s"Rate exceeded. Please try again in $seconds s")
-    case GitHubV3Format.NotFound => Results.NotFound(s"Sorry, couldn't find $resource. Did you spell it right?")
-    case GitHubV3Format.Empty => Ok(views.html.empty(resource))
+      Results.Forbidden(views.html.error(s"GitHub access rate exceeded", s"We currently have too many requests. Please try again in $seconds "))
+    case GitHubV3Format.NotFound => Results.NotFound(views.html.error(s"$resource not found", s"Sorry, couldn't find $resource. Did you spell it right?"))
+    case GitHubV3Format.Empty => Results.NotFound(views.html.error(s"$resource is empty", s"Sorry, there is no data for $resource"))
   }
 }
