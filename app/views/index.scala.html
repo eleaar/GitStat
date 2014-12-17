@@ -10,7 +10,7 @@
                 <label class="sr-only" for="nameInput">Repository name</label>
                 <input type="text" id="nameInput" name="name" placeholder="Repository name" class="form-control input-lg">
                 <span class="input-group-btn">
-                    <button type="submit" class="btn btn-success btn-lg" type="button">Search</button>
+                    <button id="nameSubmit" type="submit" data-loading-text="Searching..." class="btn btn-success btn-lg" type="button" autocomplete="off">Search</button>
                 </span>
             </div><!-- /input-group -->
         </form>
@@ -18,3 +18,9 @@
 
 
 }
+
+<script>
+  $('#nameSubmit').on('click', function () {
+    $(this).button('loading')
+  })
+</script>
