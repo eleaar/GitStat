@@ -19,6 +19,8 @@ object GitHubV3Format {
 
   case object NotModified extends GitHubResponse[Nothing]
 
+  case object Empty extends GitHubResponse[Nothing]
+
   case class RepositoryInfo(full_name: String, description: String)
 
   implicit val repositoryInfoReads = (

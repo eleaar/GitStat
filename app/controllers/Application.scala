@@ -82,5 +82,6 @@ object Application extends Controller {
       val seconds = Seconds.secondsBetween(DateTime.now, new DateTime(time * 1000)).getSeconds
       Forbidden(s"Rate exceeded. Please try again in $seconds s")
     case GitHubV3Format.NotFound => Results.NotFound(s"Sorry, couldn't find $resource. Did you spell it right?")
+    case GitHubV3Format.Empty => Ok(views.html.empty(resource))
   }
 }

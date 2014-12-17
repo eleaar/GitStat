@@ -72,6 +72,9 @@ class GitHubServiceImpl(client: WSClient) extends GitHubService {
       case response if response.status == NOT_MODIFIED =>
         log.debug(s"Querying $queryUrl: resource not modified")
         NotModified
+      case response if isRepositoryEmpty(response) =>
+        log.debug(s"Querying $queryUrl: repository empty")
+        Empty
       case response if response.status == NOT_FOUND =>
         log.debug(s"Querying $queryUrl: resource not found")
         NotFound
@@ -79,15 +82,19 @@ class GitHubServiceImpl(client: WSClient) extends GitHubService {
         log.warn(s"Exceeding github rates when querying $queryUrl")
         RateExceeded(getResetTime(response))
       case x =>
-        log.error(s"Unexpected response when querying $queryUrl: $x")
+        log.error(s"Unexpected response when querying $queryUrl: ${x.allHeaders}, ${x.body}")
         throw new Exception("Unexpected response type")
     }
   }
+
+  def isRepositoryEmpty(response: WSResponse) = response.status == NO_CONTENT || response.status == CONFLICT
 
   private def isRateExceeded(response: WSResponse) =
     response.status == FORBIDDEN && response.header("X-RateLimit-Remaining").map("0".equals).getOrElse(false)
 
   private def getResetTime(response: WSResponse) = response.header("X-RateLimit-Reset").get.toLong
+
+
 }
 
 
