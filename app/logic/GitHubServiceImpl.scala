@@ -1,12 +1,13 @@
 package logic
 
-import play.api.{Play, Logger}
 import play.api.http.Status._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
 import play.api.libs.ws.{WSClient, WSResponse}
+import play.api.{Configuration, Logger}
 
-import scala.concurrent.{Future, ExecutionContext}
+import scala.collection.mutable
+import scala.concurrent.{ExecutionContext, Future}
 
 
 /**
@@ -26,12 +27,12 @@ object GitHubServiceImpl {
 
 }
 
-class GitHubServiceImpl(client: WSClient) extends GitHubService {
+class GitHubServiceImpl(client: WSClient, config: Configuration) extends GitHubService {
 
   private val log = Logger(this.getClass())
 
-  val clientId = Play.current.configuration.getString("github.id").getOrElse("")
-  val clientSecret = Play.current.configuration.getString("github.secret").getOrElse("")
+  val clientId = config.getString("github.id").getOrElse("")
+  val clientSecret = config.getString("github.secret").getOrElse("")
 
   import logic.GitHubServiceImpl._
   import logic.GitHubV3Format._
@@ -56,8 +57,9 @@ class GitHubServiceImpl(client: WSClient) extends GitHubService {
                             (parseResponse: (JsValue) => JsResult[T])
                             (implicit context: ExecutionContext): Future[GitHubResponse[T]] = {
     val rawQuery = client.url(queryUrl)
-    val authenticationParameters = Seq("client_id" -> clientId, "client_secret" -> clientSecret)
-    val queryWithParameters = rawQuery.withQueryString(authenticationParameters ++ queryStrings: _*)
+    val authenticationParameters = mutable.Seq("client_id" -> clientId, "client_secret" -> clientSecret)
+    val parameters = authenticationParameters ++ queryStrings
+    val queryWithParameters = rawQuery.withQueryString(parameters: _*)
     val queryWithEtag = etag match {
       case None => queryWithParameters
       case Some(value) => queryWithParameters.withHeaders("If-None-Match" -> s"$value")

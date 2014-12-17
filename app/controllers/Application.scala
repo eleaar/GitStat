@@ -1,16 +1,12 @@
 package controllers
 
-import java.net.ConnectException
-
-import com.github.nscala_time.time.Imports._
-import logic.GitHubV3Format.{RepositoryInfo, GitHubResponse, Data, Contributor}
-import logic.{GitHubService, GitHubV3Format, Analytics, GitHubServiceImpl}
-import logic.GitHubServiceImpl._
-import org.joda.time.{DateTimeZone, DateTime, Seconds}
+import logic.GitHubV3Format.{Contributor, Data, GitHubResponse}
+import logic.{Analytics, GitHubService, GitHubServiceImpl, GitHubV3Format}
+import org.joda.time.{DateTime, DateTimeZone, Seconds}
+import play.api.Play
 import play.api.Play.current
 import play.api.libs.ws.WS
-import play.api.mvc._
-import play.api.mvc.Results
+import play.api.mvc.{Results, _}
 
 import scala.concurrent.Future
 
@@ -25,7 +21,7 @@ object Application extends Controller {
   }
 
   implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
-  val gitHubService: GitHubService = new GitHubServiceImpl(WS.client)
+  val gitHubService: GitHubService = new GitHubServiceImpl(WS.client, Play.current.configuration)
 
   def search(name: String) = Action.async {
     if (name.trim.isEmpty) {
@@ -77,6 +73,7 @@ object Application extends Controller {
   def notModified[T]: PartialFunction[GitHubResponse[T], Result] = {
     case NotModified => Results.NotModified
   }
+
   def handleDefaultsFor[T](resource: String): PartialFunction[GitHubResponse[T], Result] = {
     case GitHubV3Format.RateExceeded(time) =>
       val seconds = Seconds.secondsBetween(DateTime.now, new DateTime(time * 1000)).getSeconds

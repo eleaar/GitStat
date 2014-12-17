@@ -1,12 +1,14 @@
 package logic
 
 import com.google.common.util.concurrent.MoreExecutors
+import com.typesafe.config.ConfigFactory
 import mockws.MockWS
 import org.joda.time.DateTime
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatestplus.play.PlaySpec
+import play.api.Configuration
 import play.api.http.HttpVerbs._
 import play.api.libs.json.{Json, _}
 import play.api.mvc.Action
@@ -26,6 +28,7 @@ class GitHubServiceImplSpec extends PlaySpec with MockitoSugar with ScalaFutures
 
   implicit val defaultPatience = PatienceConfig(timeout = Span(2, Seconds), interval = Span(200, Millis))
   implicit val context = ExecutionContext.fromExecutor(MoreExecutors.directExecutor())
+  val config = new Configuration(ConfigFactory.empty())
 
   "The github service search" must {
 
@@ -160,7 +163,7 @@ class GitHubServiceImplSpec extends PlaySpec with MockitoSugar with ScalaFutures
         Ok(replyWith)
       }
     })
-    val service = new GitHubServiceImpl(ws)
+    val service = new GitHubServiceImpl(ws, config)
 
     // when
     val futureResult = withMethod(service)
@@ -179,7 +182,7 @@ class GitHubServiceImplSpec extends PlaySpec with MockitoSugar with ScalaFutures
         Forbidden.withHeaders("X-RateLimit-Remaining" -> "0", "X-RateLimit-Reset" -> resetTime.toString)
       }
     })
-    val service = new GitHubServiceImpl(ws)
+    val service = new GitHubServiceImpl(ws, config)
 
     // when
     val futureResult = withMethod(service)
@@ -196,7 +199,7 @@ class GitHubServiceImplSpec extends PlaySpec with MockitoSugar with ScalaFutures
         Results.NotFound
       }
     })
-    val service = new GitHubServiceImpl(ws)
+    val service = new GitHubServiceImpl(ws, config)
 
     // when
     val futureResult = withMethod(service)
