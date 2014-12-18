@@ -21,7 +21,8 @@ libraryDependencies ++= Seq(
   "org.webjars" % "jquery" % "1.8.2",
   "org.webjars" % "bootstrap" % "3.3.1",
   "org.webjars" % "highcharts" % "4.0.4",
-  "org.webjars" % "highstock" % "2.0.4"
+  "org.webjars" % "highstock" % "2.0.4",
+  "com.newrelic.agent.java" % "newrelic-agent" % "3.12.0"
 )
 
 libraryDependencies ++= Seq(
