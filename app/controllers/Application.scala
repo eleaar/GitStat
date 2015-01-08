@@ -1,5 +1,6 @@
 package controllers
 
+import atomic.cache.AtomicCache
 import cache.{AsyncCached, PrefixedCache}
 import logic.Analytics.UserActivity
 import logic.GitHubV3Format._
@@ -14,6 +15,7 @@ import play.api.mvc.{Results, _}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.reflect.ClassTag
+import atomic._
 
 object Application extends Controller {
 
@@ -32,63 +34,57 @@ object Application extends Controller {
   implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
   val gitHubService: GitHubService = new GitHubServiceImpl(WS.client, Play.current.configuration)
 
-  def search(name: String) = Action.async {
-    AsyncCached("search").mergeRequestsBy(name) {
-      if (name.trim.isEmpty) {
-        Future.successful(Redirect(controllers.routes.Application.index()))
-      } else {
-        val futureData = gitHubService.search(name.trim)
-        futureData map handleResult(name) {
-          case Data(repositories, _) =>
-            Ok(views.html.search(name, repositories))
-        }
+  def search(name: String) = Action.atomic(s"search.$name") {
+    if (name.trim.isEmpty) {
+      Future.successful(Redirect(controllers.routes.Application.index()))
+    } else {
+      val futureData = gitHubService.search(name.trim)
+      futureData map handleResult(name) {
+        case Data(repositories, _) =>
+          Ok(views.html.search(name, repositories))
       }
     }
   }
 
-  def userRepositories(user: String) = Action.async {
-    AsyncCached("userRepos").mergeCacheRequestsBy(user) {
-      cache =>
-        val result = tryWithCache(cache)(gitHubService.userRepositories(user, _))
-        result map handleResult(user) {
-          case Data(repositories, _) =>
-            Ok(views.html.user(user, repositories))
-        }
-    }
+  def userRepositories(user: String) = Action.atomic(s"userRepos.$user") {
+    implicit ctx =>
+      val result = tryWithCache(AtomicCache())(gitHubService.userRepositories(user, _))
+      result map handleResult(user) {
+        case Data(repositories, _) =>
+          Ok(views.html.user(user, repositories))
+      }
+      Future.successful(Ok("foo"))
   }
 
   implicit val zone = DateTimeZone.getDefault()
   implicit val contributorsOrdering = Ordering.by[Contributor, String](_.login.toLowerCase)
   implicit val descendingCommitCount = Ordering.by[UserActivity, Int](_._2.size).reverse
 
-
-  def stats(user: String, repo: String) = Action.async {
-    AsyncCached("stats").mergeCacheRequestsBy(s"$user.$repo") {
-      cache =>
-        val contributorsResponseF = tryWithCache(cache.at("contributors"))(gitHubService.contributors(user, repo, _))
-        val commitsResponseF = tryWithCache(cache.at("commits")) {
-          gitHubService.commits(user, repo, _).map[GitHubResponse[Seq[UserActivity]]] {
-            case Data(commits, etag) =>
-              val userActivity = Analytics.commitsPerUser(commits)
-              Data(userActivity, etag)
-            case x => x.asInstanceOf[GitHubResponse[Seq[UserActivity]]]
-          }
+  def stats(user: String, repo: String) = Action.atomic(s"stats.$user.$repo") {
+    implicit ctx =>
+      val contributorsResponseF = tryWithCache(AtomicCache().at("contributors"))(gitHubService.contributors(user, repo, _))
+      val commitsResponseF = tryWithCache(AtomicCache().at("commits")) {
+        gitHubService.commits(user, repo, _).map[GitHubResponse[Seq[UserActivity]]] {
+          case Data(commits, etag) =>
+            val userActivity = Analytics.commitsPerUser(commits)
+            Data(userActivity, etag)
+          case x => x.asInstanceOf[GitHubResponse[Seq[UserActivity]]]
         }
+      }
 
-        for (contributorsResponse <- contributorsResponseF;
-             commitsResponse <- commitsResponseF) yield {
-          (contributorsResponse, commitsResponse) match {
-            case (Data(contributors, _), Data(commits, _)) =>
-              Ok(views.html.stats(s"$user/$repo", contributors.sorted, commits.sorted))
-            case (x, y) =>
-              val handle = handleDefaultsFor(s"$user/$repo").lift
-              handle(x).orElse(handle(y)).get
-          }
+      for (contributorsResponse <- contributorsResponseF;
+           commitsResponse <- commitsResponseF) yield {
+        (contributorsResponse, commitsResponse) match {
+          case (Data(contributors, _), Data(commits, _)) =>
+            Ok(views.html.stats(s"$user/$repo", contributors.sorted, commits.sorted))
+          case (x, y) =>
+            val handle = handleDefaultsFor(s"$user/$repo").lift
+            handle(x).orElse(handle(y)).get
         }
-    }
+      }
   }
 
-  def tryWithCache[T](cache: PrefixedCache)(body: (Option[String]) => Future[GitHubResponse[T]])(implicit ct: ClassTag[T]): Future[GitHubResponse[T]] = {
+  def tryWithCache[T](cache: AtomicCache)(body: (Option[String]) => Future[GitHubResponse[T]])(implicit ct: ClassTag[T]): Future[GitHubResponse[T]] = {
     val dataKey = "data"
     val etagKey = "etag"
     val cacheExpiration = 1 hour
