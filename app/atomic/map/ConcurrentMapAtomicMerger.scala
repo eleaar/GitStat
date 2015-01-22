@@ -23,16 +23,17 @@ class ConcurrentMapAtomicMerger(cache: ConcurrentMap[String, Memoizer]) extends 
 
   def merge[T](key: String, value: => Future[T])(implicit e: ExecutionContext) = {
     val memo = new Memoizer(value)
-    val v = cache.putIfAbsent(key, memo) match {
-      case null =>
-        val f = memo.value
-        f.onComplete {
-          case _ => cache.remove(key, memo)
-        }
-        f
-      case m => m.value
-    }
-    v.asInstanceOf[Future[T]]
+    Future {
+      cache.putIfAbsent(key, memo) match {
+        case null =>
+          val f = memo.value
+          f.onComplete {
+            case _ => cache.remove(key, memo)
+          }
+          f
+        case m => m.value
+      }
+    }.flatMap(x => x.asInstanceOf[Future[T]])
   }
 }
 
