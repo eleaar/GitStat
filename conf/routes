@@ -4,19 +4,23 @@
 
 # Home page
 
-GET     /loaderio-8902778a06c83979dcd9477255140fd7.txt controllers.Assets.at(path="/public", file="loaderio.txt")
+GET        /loaderio-8902778a06c83979dcd9477255140fd7.txt        controllers.Assets.at(path="/public", file="loaderio.txt")
 
-GET        /                         controllers.Application.index
-GET        /search                   controllers.Application.search(name ?= "")
-GET        /stats/:user              controllers.Application.userRepositories(user)
-GET        /stats/:user/:repo        controllers.Application.stats(user, repo)
+GET        /                                                     controllers.Application.index
+GET        /search                                               controllers.Application.search(name ?= "")
+GET        /stats/:user                                          controllers.Application.userRepositories(user)
+GET        /stats/:user/:repo                                    controllers.Application.stats(user, repo)
+
+# Load balance tests
+GET        /loadtest/default/:time                               controllers.LoadTest.default(time: Long)
+GET        /loadtest/atomic/:time                               controllers.LoadTest.atomic(time: Long)
 
 # Redirect urls with trailing slash
-GET        /*path/                   controllers.Application.untrail(path: String)
+GET        /*path/                                               controllers.Application.untrail(path: String)
 
 # Map static resources from the /public folder to the /assets URL path
-GET        /assets/*file             controllers.Assets.at(path="/public", file)
+GET        /assets/*file                                         controllers.Assets.at(path="/public", file)
 
 # WebJar routing (for bootstrap, ...)
-GET        /webjars/*file            controllers.WebJarAssets.at(file)
+GET        /webjars/*file                                        controllers.WebJarAssets.at(file)
 
